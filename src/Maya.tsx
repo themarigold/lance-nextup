@@ -1,15 +1,55 @@
+import { useState } from 'react'
 import { board, CATEGORY_LABEL, holdCategories, idle, notices } from './domain/rules'
-import type { Action, Minutes, State } from './domain/types'
+import type { Action, Category, Minutes, State } from './domain/types'
 import { BigButton, HoldChip, Icon, OccupancyChip, PLATE, StateChip } from './ui'
+
+const CATEGORIES: Category[] = ['ac', 'plumbing', 'light', 'broken']
+
+/** Tap 2 of the report: one tap files it. No typing, no send button; the toast's Undo is the safety net. */
+function ReportSheet({ roomId, onPick, onClose }: { roomId: string; onPick: (c: Category) => void; onClose: () => void }) {
+  return (
+    // Sits over the Next Up panel, not the big button, so a double tap can't land on Start.
+    <div role="dialog" aria-label={`Problem in ${roomId}`} className="fixed inset-x-0 top-14 bottom-0 z-40 bg-white px-4 pt-3">
+      <div className="flex items-center">
+        <h2 className="flex-1 text-2xl font-bold">Problem in {roomId}</h2>
+        <button aria-label="Close" onClick={onClose} className="size-12 text-2xl touch-manipulation">✕</button>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        {CATEGORIES.map((c) => (
+          <button
+            key={c}
+            onClick={() => onPick(c)}
+            className="h-32 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash"
+          >
+            <Icon name={c} big />
+            {CATEGORY_LABEL[c]}
+          </button>
+        ))}
+      </div>
+      <p className="mt-4 text-lg text-muted">Tap one. Maintenance gets it right away.</p>
+    </div>
+  )
+}
 
 export function Maya({ s, now, act }: { s: State; now: Minutes; act: (a: Action) => void }) {
   const b = board(s, now)
   const [next, ...rest] = b.active
   const working = next?.room.state === 'in_progress'
   const at = Date.now
+  const [sheet, setSheet] = useState(false)
 
   return (
     <>
+      {sheet && next && (
+        <ReportSheet
+          roomId={next.room.id}
+          onClose={() => setSheet(false)}
+          onPick={(category) => {
+            setSheet(false) // closes on the first tap, so a double tap can't file two reports
+            act({ type: 'report', id: crypto.randomUUID(), roomId: next.room.id, category, at: at() })
+          }}
+        />
+      )}
       {notices(s).map(({ task, text }) => (
         <div key={task.id} className="mx-4 mt-3 flex items-center gap-3 rounded-2xl border-2 border-black p-1 pl-4 text-lg font-semibold">
           <span className="flex-1">✓ {text}</span>
@@ -42,7 +82,10 @@ export function Maya({ s, now, act }: { s: State; now: Minutes; act: (a: Action)
                 <HoldChip key={i} category={c} text={`On hold · ${CATEGORY_LABEL[c]}`} />
               ))}
             </div>
-            <button className="mt-4 w-full h-14 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash">
+            <button
+              onClick={() => setSheet(true)}
+              className="mt-4 w-full h-14 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash"
+            >
               Report problem · {next.room.id}
             </button>
           </>

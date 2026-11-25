@@ -50,6 +50,13 @@
   change left a variable unused, so `tsc` failed and Playwright tested the old (guarded) build. Any
   break-the-code check must stop when the build fails, or its result means nothing.
 
+- **Report sheet:** "Problem in 106", four big icon buttons, ✕, and no text field or send button. It
+  covers the Next Up panel, not the big button, so a second tap after it closes lands on the plate or
+  chips, never on Start. It closes on the first tap.
+- **Sam's screen:** the same layout as Maya's. The plate is the room, the title is the category, and the
+  line reads "Room on hold · guest arrives 11:30 am · from Maya" (`taskReason` in rules.ts, where the
+  hold comes from open tasks). The big button is "Fixed 106 · AC", one tap, no toast and no undo.
+
 ## Cuts
 - A "Back to suggested" button after picking a row. Safari doesn't fire a tap when she scrolls, and
   tapping another row switches back.

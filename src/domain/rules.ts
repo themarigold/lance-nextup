@@ -85,6 +85,19 @@ export function idle(b: Board): string | undefined {
   return `Nothing to start. ${first.room.id} opens at ${fmt(opensAt(first.room))}`
 }
 
+const NAME: Record<Task['reportedBy'], string> = { maya: 'Maya', sam: 'Sam', priya: 'Priya' }
+
+/** Sam's card line: "Room on hold · guest arrives 11:30 am · from Maya". The hold comes from open tasks. */
+export function taskReason(s: State, t: Task, now: Minutes): string {
+  const arrival = s.rooms.find((r) => r.id === t.roomId)?.arrival
+  const text = [
+    isOnHold(s.tasks, t.roomId) && 'room on hold',
+    arrival !== undefined && `${arrival <= now ? 'guest waiting since' : 'guest arrives'} ${fmt(arrival)}`,
+    `from ${NAME[t.reportedBy]}`,
+  ].filter(Boolean).join(' · ')
+  return text[0].toUpperCase() + text.slice(1)
+}
+
 /** Holds first, then soonest arrival of the room's next guest, then oldest. */
 export function samQueue(s: State): Task[] {
   const arrival = (t: Task) => s.rooms.find((r) => r.id === t.roomId)?.arrival ?? Infinity

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { NOW, seed } from './seed'
-import { board, fmt, holdCategories, idle, isOnHold, notices, roomsLeft, samQueue } from './rules'
+import { board, fmt, holdCategories, idle, isOnHold, notices, roomsLeft, samQueue, taskReason } from './rules'
 import { reduce } from './reduce'
 import type { Action, Category, Room, State } from './types'
 
@@ -171,5 +171,15 @@ describe('Review gaps (AC 1, 2, 8, 10 and the rules behind AC 4, 11)', () => {
     expect(idle(board(seed, NOW))).toBeUndefined()
     const allDone = { ...seed, rooms: seed.rooms.map((r) => ({ ...r, state: 'clean' as const })) }
     expect(idle(board(allDone, NOW))).toBe('All your rooms are done')
+  })
+})
+
+describe("Sam's card reason (AC 11)", () => {
+  it('says the room is on hold, when the guest arrives, and who reported it', () => {
+    const s = run(seed, report('r', '106', 'ac'))
+    const [first, second] = samQueue(s)
+    expect(taskReason(s, first, NOW)).toBe('Room on hold · guest arrives 11:30 am · from Maya')
+    expect(taskReason(s, second, NOW)).toBe('From Priya')
+    expect(taskReason(s, first, PM_12_05)).toBe('Room on hold · guest waiting since 11:30 am · from Maya')
   })
 })

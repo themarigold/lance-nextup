@@ -4,6 +4,7 @@ import { board, CATEGORY_LABEL, fmt, roomsLeft } from './domain/rules'
 import { NOW, seed } from './domain/seed'
 import type { Action, State } from './domain/types'
 import { Maya } from './Maya'
+import { Sam } from './Sam'
 import { Toast } from './ui'
 
 const KEY = 'lance-nextup:v1'
@@ -76,8 +77,7 @@ export default function App() {
       {s.user === 'maya' ? (
         <Maya s={s} now={NOW} act={act} />
       ) : (
-        // shortcut: placeholder until slice 3 builds Sam's screen.
-        <p className="p-4 text-xl">Sam's list comes in slice 3.</p>
+        <Sam s={s} now={NOW} act={act} />
       )}
     </main>
   )

@@ -26,10 +26,10 @@ const PATHS = {
 }
 export type IconName = keyof typeof PATHS
 
-export const Icon = ({ name, label }: { name: IconName; label?: string }) => (
+export const Icon = ({ name, label, big }: { name: IconName; label?: string; big?: boolean }) => (
   <svg
     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-    className="size-5 shrink-0" role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}
+    className={`shrink-0 ${big ? 'size-10' : 'size-5'}`} role={label ? 'img' : undefined} aria-label={label} aria-hidden={label ? undefined : true}
   >
     {PATHS[name]}
   </svg>

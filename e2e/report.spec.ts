@@ -1,0 +1,88 @@
+import { test, expect, type Page } from '@playwright/test'
+import { shot, trackErrors, assertPhoneRules } from './helpers'
+
+const nextUp = (page: Page) => page.getByRole('region', { name: 'Next up' })
+const big = (page: Page) => page.getByRole('button', { name: /^(Start|Finish|Fixed) \d+/ })
+const toast = (page: Page) => page.getByRole('status')
+const user = (page: Page, name: 'Maya' | 'Sam') => page.getByRole('button', { name: new RegExp(`^${name}$`, 'i') })
+
+async function tapBig(page: Page, label: string) {
+  await expect(big(page)).toHaveText(label)
+  await expect(big(page)).toBeEnabled()
+  await big(page).tap()
+}
+
+/** Report problem · 106 → AC: exactly two taps. */
+async function reportAC(page: Page) {
+  await page.getByRole('button', { name: 'Report problem · 106' }).tap()
+  await page.getByRole('dialog', { name: 'Problem in 106' }).getByRole('button', { name: 'AC', exact: true }).tap()
+}
+
+test('AC 7: two taps report AC on 106, which goes on hold and stays Next Up', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Report problem · 106' }).tap()
+  const sheet = page.getByRole('dialog', { name: 'Problem in 106' })
+  await expect(sheet).toBeVisible()
+  await expect(sheet.getByRole('button')).toHaveText(['✕', 'AC', 'Plumbing', 'Light', 'Broken item'])
+  await expect(page.getByRole('textbox')).toHaveCount(0) // no typing
+  await expect(page.getByRole('button', { name: /send|submit/i })).toHaveCount(0) // no send button
+  await assertPhoneRules(page)
+  await shot(page, '04-report-sheet')
+
+  await sheet.getByRole('button', { name: 'AC', exact: true }).tap()
+  await expect(sheet).toHaveCount(0) // closed on the first tap
+  await expect(toast(page)).toContainText('AC reported on 106')
+  await expect(toast(page).getByRole('button', { name: 'Undo' })).toBeVisible()
+  await expect(nextUp(page).getByText('On hold · AC')).toBeVisible()
+  await expect(nextUp(page)).toContainText('106')
+  await expect(big(page)).toHaveText('Start 106')
+  expect(errs).toEqual([])
+})
+
+test('AC 7: Undo removes the hold, and Sam never sees the task', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await reportAC(page)
+  await expect(nextUp(page).getByText('On hold · AC')).toBeVisible()
+  await toast(page).getByRole('button', { name: 'Undo' }).tap()
+  await expect(nextUp(page).getByText('On hold · AC')).toHaveCount(0)
+  await expect(toast(page)).toHaveCount(0)
+
+  await user(page, 'Sam').tap()
+  await expect(big(page)).toHaveText('Fixed 204 · Light')
+  await expect(page.locator('main')).not.toContainText('106')
+  expect(errs).toEqual([])
+})
+
+test('AC 11: Sam fixes 106 in one tap; Maya gets the banner and the done-row note', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await reportAC(page)
+  await expect(toast(page)).toHaveCount(0, { timeout: 7000 }) // the toast covers the demo bar for 5 s
+
+  await user(page, 'Sam').tap()
+  await expect(nextUp(page)).toContainText('106')
+  await expect(nextUp(page)).toContainText('Room on hold · guest arrives 11:30 am · from Maya')
+  await assertPhoneRules(page)
+  await expect(big(page)).toBeEnabled()
+  await shot(page, '05-sam-queue')
+  await tapBig(page, 'Fixed 106 · AC')
+  await expect(big(page)).toHaveText('Fixed 204 · Light')
+
+  await user(page, 'Maya').tap()
+  const banner = page.getByText('106 AC fixed by Sam')
+  await expect(banner).toBeVisible()
+  await expect(nextUp(page).getByText('On hold · AC')).toHaveCount(0) // hold lifted: it came from the open task
+  await assertPhoneRules(page)
+  await expect(big(page)).toBeEnabled() // shot after the plate fade and the 500 ms guard settle
+  await shot(page, '06-maya-notice')
+
+  await page.getByRole('button', { name: 'Dismiss' }).tap()
+  await expect(banner).toHaveCount(0)
+  await tapBig(page, 'Start 106')
+  await tapBig(page, 'Finish 106')
+  await page.getByText(/^Done \(/).tap()
+  await expect(page.locator('details li', { hasText: '106' })).toContainText('Clean · AC fixed by Sam')
+  expect(errs).toEqual([])
+})
