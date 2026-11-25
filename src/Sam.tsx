@@ -12,15 +12,26 @@ export function Sam({ s, now, act }: { s: State; now: Minutes; act: (a: Action) 
       <section aria-label="Next up" className="px-4 pt-4 pb-5 border-b-2 border-black">
         <h2 className="text-lg font-semibold">Next up</h2>
         {next && room ? (
-          <div className="mt-2 flex items-center gap-4">
-            <div className={`shrink-0 grid place-items-center w-40 h-28 rounded-xl border-4 font-extrabold tabular-nums text-[64px] ${PLATE[room.state]}`}>
-              {room.id}
+          <>
+            <div className="mt-2 flex items-center gap-4">
+              <div className={`shrink-0 grid place-items-center w-40 h-28 rounded-xl border-4 font-extrabold tabular-nums text-[64px] ${PLATE[room.state]}`}>
+                {room.id}
+              </div>
+              <div>
+                <p className="flex items-center gap-2 text-2xl font-bold"><Icon name={next.category} />{CATEGORY_LABEL[next.category]}</p>
+                <p className="mt-1 text-lg leading-snug">{taskReason(s, next, now)}</p>
+              </div>
             </div>
-            <div>
-              <p className="flex items-center gap-2 text-2xl font-bold"><Icon name={next.category} />{CATEGORY_LABEL[next.category]}</p>
-              <p className="mt-1 text-lg leading-snug">{taskReason(s, next, now)}</p>
-            </div>
-          </div>
+            {/* Outlined and up in the card, far from the big Fixed button. */}
+            {next.status === 'open' && (
+              <button
+                onClick={() => act({ type: 'needsPart', taskId: next.id, at: Date.now() })}
+                className="mt-4 w-full h-14 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash"
+              >
+                Needs part · {next.roomId}
+              </button>
+            )}
+          </>
         ) : (
           <p className="mt-2 text-2xl font-semibold">No open problems</p>
         )}

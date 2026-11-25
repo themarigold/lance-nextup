@@ -20,13 +20,14 @@ export const holdCategories = (tasks: Task[], roomId: string): Category[] =>
 
 export const isOnHold = (tasks: Task[], roomId: string) => holdCategories(tasks, roomId).length > 0
 
-const fixedText = (t: Task) => `${CATEGORY_LABEL[t.category]} fixed by Sam`
+/** What Sam did with it: "AC fixed by Sam" / "AC needs a part". */
+const outcome = (t: Task) => `${CATEGORY_LABEL[t.category]} ${t.status === 'fixed' ? 'fixed by Sam' : 'needs a part'}`
 
-/** Banners: her reports Sam fixed that she hasn't dismissed. */
+/** Banners: her reports Sam fixed or is waiting on a part for, until she dismisses them. */
 export const notices = (s: State) =>
   s.tasks
-    .filter((t) => t.reportedBy === s.user && t.status === 'fixed' && !t.noticeDismissed)
-    .map((task) => ({ task, text: `${task.roomId} ${fixedText(task)}` }))
+    .filter((t) => t.reportedBy === s.user && t.status !== 'open' && !t.noticeDismissed)
+    .map((task) => ({ task, text: `${task.roomId} ${outcome(task)}` }))
 
 export const isGreyed = (r: Room, now: Minutes) => (r.dndUntil ?? -1) > now || (r.lateCheckout ?? -1) > now
 
@@ -67,10 +68,14 @@ export function board(s: State, now: Minutes): Board {
   }
 }
 
-// "Clean · AC fixed by Sam": the note stays on the row after she dismisses the banner.
+// "Clean · On hold · AC" while held, then "Clean · AC needs a part" / "Clean · AC fixed by Sam".
+// The note stays on the row after she dismisses the banner.
 function doneReason(s: State, room: Room) {
-  const fixed = s.tasks.filter((t) => t.roomId === room.id && t.reportedBy === s.user && t.status === 'fixed')
-  return [DONE_WORD[room.state]!, ...fixed.map(fixedText)].join(' · ')
+  const notes = s.tasks.filter((t) => t.roomId === room.id).flatMap((t) => {
+    if (t.status === 'open') return HOLDS.includes(t.category) ? [`On hold · ${CATEGORY_LABEL[t.category]}`] : []
+    return t.status === 'needs_part' || t.reportedBy === s.user ? [outcome(t)] : []
+  })
+  return [DONE_WORD[room.state]!, ...notes].join(' · ')
 }
 
 export const roomsLeft = (b: Board) => b.active.length + b.greyed.length
@@ -91,6 +96,7 @@ const NAME: Record<Task['reportedBy'], string> = { maya: 'Maya', sam: 'Sam', pri
 export function taskReason(s: State, t: Task, now: Minutes): string {
   const arrival = s.rooms.find((r) => r.id === t.roomId)?.arrival
   const text = [
+    t.status === 'needs_part' && 'waiting for a part',
     isOnHold(s.tasks, t.roomId) && 'room on hold',
     arrival !== undefined && `${arrival <= now ? 'guest waiting since' : 'guest arrives'} ${fmt(arrival)}`,
     `from ${NAME[t.reportedBy]}`,
@@ -98,11 +104,12 @@ export function taskReason(s: State, t: Task, now: Minutes): string {
   return text[0].toUpperCase() + text.slice(1)
 }
 
-/** Holds first, then soonest arrival of the room's next guest, then oldest. */
+/** Holds first, then soonest arrival of the room's next guest, then oldest; tasks waiting on a part go last. */
 export function samQueue(s: State): Task[] {
   const arrival = (t: Task) => s.rooms.find((r) => r.id === t.roomId)?.arrival ?? Infinity
   const soft = (t: Task) => (HOLDS.includes(t.category) ? 0 : 1)
+  const waiting = (t: Task) => (t.status === 'needs_part' ? 1 : 0)
   return s.tasks
-    .filter((t) => t.status === 'open')
-    .sort((a, b) => soft(a) - soft(b) || arrival(a) - arrival(b) || a.createdAt - b.createdAt)
+    .filter((t) => t.status !== 'fixed')
+    .sort((a, b) => waiting(a) - waiting(b) || soft(a) - soft(b) || arrival(a) - arrival(b) || a.createdAt - b.createdAt)
 }

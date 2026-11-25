@@ -183,3 +183,33 @@ describe("Sam's card reason (AC 11)", () => {
     expect(taskReason(s, first, PM_12_05)).toBe('Room on hold · guest waiting since 11:30 am · from Maya')
   })
 })
+
+describe('Done row while held, and AC 13: Needs part', () => {
+  const start = (roomId: string): Action => ({ type: 'start', id: `s-${roomId}`, roomId, at: 1000 })
+  const finish = (roomId: string): Action => ({ type: 'finish', id: `f-${roomId}`, roomId, at: 2000 })
+  const needsPart = (taskId: string): Action => ({ type: 'needsPart', taskId, at: 2500 })
+  const done106 = (s: State) => board(s, NOW).done.find((r) => r.room.id === '106')?.reason
+
+  it('a room finished while still held reads "Clean · On hold · AC"', () => {
+    expect(done106(run(seed, start('106'), report('r', '106', 'ac'), finish('106')))).toBe('Clean · On hold · AC')
+  })
+
+  it('needs part: the hold stays, it drops to the bottom of Sam\'s list, Maya gets the banner', () => {
+    const s = run(seed, report('r', '106', 'ac'), needsPart('r'))
+    expect(s.tasks.find((t) => t.id === 'r')?.status).toBe('needs_part')
+    expect(isOnHold(s.tasks, '106')).toBe(true)
+    expect(samQueue(s).map((t) => t.roomId)).toEqual(['204', '106'])
+    expect(notices(s).map((n) => n.text)).toEqual(['106 AC needs a part'])
+    expect(taskReason(s, samQueue(s)[1], NOW)).toBe('Waiting for a part · room on hold · guest arrives 11:30 am · from Maya')
+    expect(done106(run(s, start('106'), finish('106')))).toBe('Clean · AC needs a part')
+  })
+
+  it('Fixed still closes it later: the hold lifts and the fixed banner shows, even after dismissing the first', () => {
+    const waiting = run(seed, report('r', '106', 'ac'), needsPart('r'), { type: 'dismiss', taskId: 'r', at: 2600 })
+    expect(notices(waiting)).toEqual([])
+    const fixed = run(waiting, fix('r'))
+    expect(isOnHold(fixed.tasks, '106')).toBe(false)
+    expect(samQueue(fixed).map((t) => t.roomId)).toEqual(['204'])
+    expect(notices(fixed).map((n) => n.text)).toEqual(['106 AC fixed by Sam'])
+  })
+})

@@ -57,7 +57,7 @@ describe('AC 5: reduce rejects invalid actions', () => {
     expectRejected(seed, pick('105'))
   })
 
-  it('rejects a fix of a task that is not open', () => {
+  it('rejects a fix of a task that is already fixed', () => {
     expectRejected(run(seed, fix('t-204')), fix('t-204'))
   })
 
@@ -151,5 +151,14 @@ describe('AC 12: loading saved state', () => {
 
   it('falls back to the seed for missing, unreadable or wrong-shape data', () => {
     for (const raw of [null, '{not json', 'null', '{}', '{"user":"maya","rooms":[],"tasks":{},"log":[]}']) expect(load(raw, seed)).toBe(seed)
+  })
+})
+
+describe('AC 13: Needs part rejections', () => {
+  const needsPart = (taskId: string): Action => ({ type: 'needsPart', taskId, at: 3500 })
+  it('rejects Needs part on a task that is already waiting or fixed', () => {
+    const waiting = run(seed, report('r', '106'), needsPart('r'))
+    expectRejected(waiting, needsPart('r'))
+    expectRejected(run(waiting, fix('r')), needsPart('r'))
   })
 })

@@ -57,6 +57,13 @@
   line reads "Room on hold · guest arrives 11:30 am · from Maya" (`taskReason` in rules.ts, where the
   hold comes from open tasks). The big button is "Fixed 106 · AC", one tap, no toast and no undo.
 
+- **Demo path test (AC 7):** Start 106, report AC while cleaning, then Finish. 106 stays Next Up and on hold
+  until Finish, and its Done row then reads "Clean · On hold · AC".
+- **Needs part (AC 13):** an outlined button in Sam's card. The task waits at the bottom of his list, and the
+  hold stays because it comes from the task that's still open. Maya gets "106 AC needs a part". Fixed still
+  closes it later (so AC 5 now rejects a fix only on an already-fixed task), and each new outcome shows a
+  fresh banner even if she dismissed the earlier one.
+
 ## Cuts
 - A "Back to suggested" button after picking a row. Safari doesn't fire a tap when she scrolls, and
   tapping another row switches back.
@@ -64,7 +71,7 @@
 - A send button, typing, or photos in the report.
 
 ## Deferred
-- Stretch: Needs part, Stop, metrics, reporting from a done row.
+- Stretch left: metrics, Stop, reporting from a done row.
 - Lock problems should hold the room. For now a lock is filed under Broken item, which doesn't hold.
 - Undo for Sam's Fixed.
 - Atkinson Hyperlegible Next font (one self-hosted .woff2), for clearer 1/l/I and 0/O. `system-ui` for now.

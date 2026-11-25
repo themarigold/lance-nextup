@@ -38,14 +38,17 @@ function apply(s: State, a: Action, now: Minutes): State | undefined {
       const { rooms, tasks, picked } = s.before
       return { ...s, rooms, tasks, picked }
     }
+    // A new outcome gets a fresh banner, even if she dismissed the "needs a part" one.
     case 'fix':
-      return task?.status === 'open' ? { ...s, tasks: setTask({ status: 'fixed' }) } : undefined
+      return task && task.status !== 'fixed' ? { ...s, tasks: setTask({ status: 'fixed', noticeDismissed: false }) } : undefined
+    case 'needsPart':
+      return task?.status === 'open' ? { ...s, tasks: setTask({ status: 'needs_part', noticeDismissed: false }) } : undefined
     case 'dismiss':
-      return task?.status === 'fixed' && !task.noticeDismissed ? { ...s, tasks: setTask({ noticeDismissed: true }) } : undefined
+      return task && task.status !== 'open' && !task.noticeDismissed ? { ...s, tasks: setTask({ noticeDismissed: true }) } : undefined
     case 'switchUser':
       return a.to !== s.user ? { ...s, user: a.to } : undefined
     default:
-      return undefined // stretch actions (needsPart, stop, open) are rejected until built
+      return undefined // stretch actions (stop, open) are rejected until built
   }
 }
 

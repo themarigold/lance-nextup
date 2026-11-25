@@ -40,6 +40,28 @@ test('AC 7: two taps report AC on 106, which goes on hold and stays Next Up', as
   expect(errs).toEqual([])
 })
 
+test('AC 7, demo path: Start 106, report AC while cleaning, Finish', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await tapBig(page, 'Start 106')
+  await reportAC(page)
+
+  // 106 stays Next Up, in progress and on hold, until she taps Finish.
+  await expect(nextUp(page).getByText('106', { exact: true })).toBeVisible()
+  await expect(nextUp(page).getByText('In progress', { exact: true })).toBeVisible()
+  await expect(nextUp(page).getByText('On hold · AC')).toBeVisible()
+  await expect(page.getByRole('button', { name: /^106\b/ })).toHaveCount(0) // not pushed down into the list
+  await expect(big(page)).toHaveText('Finish 106')
+  await assertPhoneRules(page)
+
+  await tapBig(page, 'Finish 106')
+  await expect(nextUp(page).getByText('103', { exact: true })).toBeVisible()
+  await expect(big(page)).toHaveText('Start 103')
+  await page.getByText(/^Done \(/).tap()
+  await expect(page.locator('details li', { hasText: '106' })).toContainText('Clean · On hold · AC')
+  expect(errs).toEqual([])
+})
+
 test('AC 7: Undo removes the hold, and Sam never sees the task', async ({ page }) => {
   const errs = trackErrors(page)
   await page.goto('/')
@@ -52,6 +74,25 @@ test('AC 7: Undo removes the hold, and Sam never sees the task', async ({ page }
   await user(page, 'Sam').tap()
   await expect(big(page)).toHaveText('Fixed 204 · Light')
   await expect(page.locator('main')).not.toContainText('106')
+  expect(errs).toEqual([])
+})
+
+test('AC 13: Sam marks 106 Needs part; it waits at the bottom, stays on hold, and Maya is told', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await reportAC(page)
+  await expect(toast(page)).toHaveCount(0, { timeout: 7000 })
+
+  await user(page, 'Sam').tap()
+  await page.getByRole('button', { name: 'Needs part · 106' }).tap()
+  await expect(big(page)).toHaveText('Fixed 204 · Light') // 106 dropped below 204
+  await expect(page.locator('li', { hasText: '106' })).toContainText('Waiting for a part')
+  await assertPhoneRules(page)
+  await shot(page, '07-sam-needs-part')
+
+  await user(page, 'Maya').tap()
+  await expect(page.getByText('106 AC needs a part')).toBeVisible()
+  await expect(nextUp(page).getByText('On hold · AC')).toBeVisible() // still held: the task is open-ended
   expect(errs).toEqual([])
 })
 

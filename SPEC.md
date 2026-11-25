@@ -28,7 +28,8 @@ appears as a word. The check is `/\bready\b/i`, so "already" passes.
 3. **Stayovers.** Room number order. Reason: "Stayover".
 4. **Greyed, at the bottom, no Start.** DND until a time later than now ("Do not disturb until 10:45 am"),
    or a late checkout later than now ("Late checkout 12:00 pm"). Room number order.
-5. **Done** (collapsed): clean and inspected rooms. Row reads e.g. "Clean" or "Clean · AC fixed by Sam".
+5. **Done** (collapsed): clean and inspected rooms. Row reads e.g. "Clean"; "Clean · On hold · AC" while an
+   AC or Plumbing task is open; "Clean · AC needs a part" after Needs part; "Clean · AC fixed by Sam".
 
 A room that is in progress is always Next Up, and only one room can be in progress at a time.
 **Her pick:** when nothing is in progress, tapping a row that isn't greyed makes that room Next Up,
@@ -74,7 +75,9 @@ kind, the app starts from the seed. The undo copy is never loaded, so an Undo ca
 reload. Bump the key whenever types.ts changes.
 
 **Sam's order:** tasks that hold their room first, then soonest arrival of that room's next guest
-(rooms with no arrival go after), then oldest. His big button is a single tap: "Fixed 106 · AC".
+(rooms with no arrival go after), then oldest; tasks waiting on a part go last. His big button is a single
+tap: "Fixed 106 · AC". An outlined "Needs part · 106" button sits in his card (stretch); Fixed still closes
+that task later.
 
 **Notice back.** When Maya is the active user, each of her reports that Sam fixed and she hasn't
 dismissed shows as a banner: "106 AC fixed by Sam ✕". The banner stays until she taps ✕, and her
@@ -181,14 +184,16 @@ export interface State {
    disappears.
 5. `[u]` `reduce` rejects, returning the *same state object* and adding nothing to the log: a Start while
    another room is in progress, a Start on a greyed room, a Finish on a room that isn't in progress, a pick
-   while a room is in progress or on a greyed room, a fix of a task that isn't open, and an undo whose
+   while a room is in progress or on a greyed room, a fix of a task that's already fixed, a Needs part on a
+   task that isn't open, and an undo whose
    `actionId` doesn't match `before` (including after a pick has cleared `before`).
 6. `[e]` After Start 106, two `page.touchscreen.tap` calls 350 ms apart on the big button's position leave
    106 clean and 103 still dirty, and the button reads "Start 103". (350 ms lands late inside the 500 ms guard,
    like a hesitant second tap. Verified: with the guard removed this test fails.)
 7. `[e]` Report problem · 106 → AC (2 taps, no text field, no send button) shows a toast with Undo, and 106
    shows an "On hold · AC" badge and stays Next Up. A second run: tapping Undo removes the badge, and Sam's
-   list doesn't have the task.
+   list doesn't have the task. The demo path: Start 106, report AC while it's in progress, and 106 stays the
+   Next Up card ("Finish 106", in progress, on hold) until Finish; then its Done row reads "Clean · On hold · AC".
 8. `[u]` Hold is derived: an open AC or Plumbing task holds its room, and Light or Broken doesn't. With two
    holding tasks on 106, fixing one keeps the hold and fixing both lifts it.
 9. `[u]` For each of start, finish and report: undo restores `rooms`, `tasks` and `picked` to their state
@@ -205,8 +210,9 @@ export interface State {
     wrong-shape and no-Undo-after-reload rules are unit-tested on `load`.)
 
 **Stretch** (in this order)
-13. `[u]` Needs part: the task becomes `needs_part`, the hold stays, it drops to the bottom of Sam's list,
-    and Maya gets the banner "106 AC needs a part".
+13. `[u]` `[e]` Needs part: the task becomes `needs_part`, the hold stays, it drops to the bottom of Sam's
+    list ("Waiting for a part"), and Maya gets the banner "106 AC needs a part". Fixed still closes it later:
+    the hold lifts and the "fixed" banner shows, even if she dismissed the "needs a part" one.
 14. `[e]` Stop: on an in-progress room, Stop returns it to dirty and to its usual place in the order. The big
     button then reads "Start <that room>".
 15. `[u]` Metrics, from a fixture log with one undone Start and one undone report: each user gets their
