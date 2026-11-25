@@ -222,6 +222,8 @@ Also stretch, with no AC until it's picked up: reporting a problem from a done r
 ## Out of scope / next steps
 - Lock problems (a lock should hold the room). Today it sits in Broken item, which doesn't hold.
 - Undo for Sam's Fixed. A mis-tap today sends Maya a false "fixed" banner.
+- Atkinson Hyperlegible Next font. 1/l/I and 0/O look clearly different, which helps with room numbers
+  and ESL readers. It would be one self-hosted .woff2; we use `system-ui` for now.
 - Supervisor screens, inspection (clean → inspected), assignment and moves (critique #3, #4).
 - A clock that moves: DND and late checkout never expire in the app itself.
 - Guest-out state for stayovers, front-desk view, translation, real backend.

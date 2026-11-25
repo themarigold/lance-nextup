@@ -51,4 +51,5 @@
 - Stretch: Needs part, Stop, metrics, reporting from a done row.
 - Lock problems should hold the room. For now a lock is filed under Broken item, which doesn't hold.
 - Undo for Sam's Fixed.
+- Atkinson Hyperlegible Next font (one self-hosted .woff2), for clearer 1/l/I and 0/O. `system-ui` for now.
 - README: replace the Vite template and show the 10:15 am and 12:05 pm orders (the spec requires this).
