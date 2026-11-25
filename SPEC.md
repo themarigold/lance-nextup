@@ -40,6 +40,9 @@ the room being sold, not the cleaning.
 
 **Big button** (bottom bar, safe-area padded) always names the room: "Start 106" → "Finish 106".
 For 500 ms after its room or label changes it is `disabled` (it looks dimmed and ignores taps).
+**Nothing to start:** when only greyed rooms are left, the Next Up panel says when the next one opens
+("Nothing to start. 105 opens at 10:45 am") and the big button is hidden. When every room is done it says
+"All your rooms are done".
 
 **Toast** sits at the **top** of the screen, under the demo bar and well away from the big button,
 so Undo is never just above Start. One toast at a time: a new one replaces the old, so Undo always
@@ -49,7 +52,8 @@ is accepted (a pick, a user switch, a dismiss). Start shows "Started 106 · Undo
 
 **Report.** The Next Up card has an outlined button that names the room, "Report problem · 106"
 (deliberately not in the bottom bar, so she can't confuse it with Finish). Tap 1 opens a 4-icon grid:
-❄️ AC · 🚿 Plumbing · 💡 Light · 🔨 Broken item. Tap 2 files the report: no typing, no send button. It shows
+❄️ AC · 🚿 Plumbing · 💡 Light · 🔨 Broken item. Tap 2 files the report: no typing, no send button. The grid closes on that tap, so a double tap can't
+file two reports. It shows
 a toast with Undo. The report reaches Sam immediately, and Undo removes it for both Maya and Sam.
 
 **Hold** is derived from tasks and never stored on the room: a room is on hold while it has an open
@@ -62,7 +66,9 @@ picked. Any other accepted action clears `before`, so only the newest action can
 only grows: `undo` is a new event, and undone actions are left out of the metrics.
 
 **Saving.** Each new state is written to localStorage under `lance-nextup:v1`, and loaded from there on
-start. If it's missing or can't be read, the app starts from the seed. Bump the key whenever types.ts changes.
+start. If it's missing, can't be parsed, or doesn't have `user`, `rooms`, `tasks` and `log` of the right
+kind, the app starts from the seed. The undo copy is never loaded, so an Undo can't come back after a
+reload. Bump the key whenever types.ts changes.
 
 **Sam's order:** tasks that hold their room first, then soonest arrival of that room's next guest
 (rooms with no arrival go after), then oldest. His big button is a single tap: "Fixed 106 · AC".
@@ -156,7 +162,8 @@ export interface State {
 
 **Core**
 1. `[u]` At 10:15 am with the seed, Maya's order is exactly **106, 103, 108, 104**, then greyed **105, 107**,
-   with **101, 102** in Done.
+   with **101, 102** in Done. Once she finishes 106, 103, 108 and 104, the panel reads "Nothing to start.
+   105 opens at 10:45 am".
 2. `[u]` At 12:05 pm with the seed, the order is exactly **106, 103, 107, 108, 104, 105**, with nothing greyed.
    Boundary: arrival at now + 120 counts as arriving and now + 121 doesn't; arrival ≤ now reads "Guest waiting".
 3. `[e]` On load as Maya, the Next Up card shows 106 with "Guest arrives 11:30 am", a VIP badge, separate
@@ -189,7 +196,8 @@ export interface State {
     "106 AC fixed by Sam". After ✕ the banner is gone, and once 106 is finished its done row reads
     "Clean · AC fixed by Sam".
 12. `[e]` After Start 106 and a page reload, the button still reads "Finish 106" and 106 is in progress.
-    With unreadable JSON stored under `lance-nextup:v1`, the app loads the seed without errors.
+    With unreadable JSON stored under `lance-nextup:v1`, the app loads the seed without errors. (The
+    wrong-shape and no-Undo-after-reload rules are unit-tested on `load`.)
 
 **Stretch** (in this order)
 13. `[u]` Needs part: the task becomes `needs_part`, the hold stays, it drops to the bottom of Sam's list,

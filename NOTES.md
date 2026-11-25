@@ -24,6 +24,23 @@
 - Main metric: Finish → next Start. Secondary: open → first Start. These are for before vs after only,
   since walking time is mixed in.
 
+- **Nothing to start:** when only greyed rooms are left, the panel says when the next one opens and the
+  big button is hidden. With the fixed clock the demo reaches this after four rooms.
+- **Review by a fresh agent (61 single changes, 32 not caught):** every real gap now has a test, and
+  re-running those changes turns a test red each time.
+  - `reduce` clears the undo copy by default (only Start, Finish and Report keep it), so new actions can't
+    forget to clear it.
+  - `load()` drops the undo copy and rejects wrong-shape data.
+  - The hold categories, the banners, the "AC fixed by Sam" done note, rooms left, and the
+    nothing-to-start message are in `rules.ts`, so Vitest covers them.
+  - The report grid closes on the first tap.
+- `reduce(state, action, now)` takes the demo time, because Start and pick depend on whether a room is
+  greyed. `useReducer` wraps it with `NOW`.
+- **Design:** `system-ui` font (nothing to add). The room number sits on a plate like a door sign. Dirty
+  is a neutral white plate, so the list isn't a wall of red. Amber is in progress, blue is clean, and
+  green is only ever inspected, which puts "never say ready" into the colours. Occupancy is an outline
+  chip with no colour.
+
 ## Cuts
 - A "Back to suggested" button after picking a row. Safari doesn't fire a tap when she scrolls, and
   tapping another row switches back.

@@ -1,10 +1,14 @@
 import { isGreyed } from './rules'
 import type { Action, CleanState, Minutes, State, Task } from './types'
 
+const UNDOABLE: Action['type'][] = ['start', 'finish', 'report']
+
 /** The only way state changes. A rejected action returns `s` itself and is not logged. */
 export function reduce(s: State, a: Action, now: Minutes): State {
   const next = apply(s, a, now)
-  return next ? { ...next, log: [...s.log, a] } : s
+  if (!next) return s
+  // Only Start, Finish and Report keep their undo copy; every other accepted action clears it.
+  return { ...next, before: UNDOABLE.includes(a.type) ? next.before : undefined, log: [...s.log, a] }
 }
 
 function apply(s: State, a: Action, now: Minutes): State | undefined {
@@ -15,13 +19,11 @@ function apply(s: State, a: Action, now: Minutes): State | undefined {
 
   const setRoom = (state: CleanState) => s.rooms.map((r) => (r === room ? { ...r, state } : r))
   const setTask = (patch: Partial<Task>) => s.tasks.map((t) => (t === task ? { ...t, ...patch } : t))
-  // Start, Finish and Report can be undone; every other accepted action clears the copy.
   const snap = (actionId: string) => ({ actionId, rooms: s.rooms, tasks: s.tasks, picked: s.picked })
-  const cleared: State = { ...s, before: undefined }
 
   switch (a.type) {
     case 'pick':
-      return canStart ? { ...cleared, picked: a.roomId } : undefined
+      return canStart ? { ...s, picked: a.roomId } : undefined
     case 'start':
       return canStart ? { ...s, rooms: setRoom('in_progress'), picked: undefined, before: snap(a.id) } : undefined
     case 'finish':
@@ -34,15 +36,27 @@ function apply(s: State, a: Action, now: Minutes): State | undefined {
     case 'undo': {
       if (s.before?.actionId !== a.actionId) return undefined
       const { rooms, tasks, picked } = s.before
-      return { ...s, rooms, tasks, picked, before: undefined }
+      return { ...s, rooms, tasks, picked }
     }
     case 'fix':
-      return task?.status === 'open' ? { ...cleared, tasks: setTask({ status: 'fixed' }) } : undefined
+      return task?.status === 'open' ? { ...s, tasks: setTask({ status: 'fixed' }) } : undefined
     case 'dismiss':
-      return task?.status === 'fixed' && !task.noticeDismissed ? { ...cleared, tasks: setTask({ noticeDismissed: true }) } : undefined
+      return task?.status === 'fixed' && !task.noticeDismissed ? { ...s, tasks: setTask({ noticeDismissed: true }) } : undefined
     case 'switchUser':
-      return a.to !== s.user ? { ...cleared, user: a.to } : undefined
+      return a.to !== s.user ? { ...s, user: a.to } : undefined
     default:
       return undefined // stretch actions (needsPart, stop, open) are rejected until built
+  }
+}
+
+/** Saved state from localStorage, or `fallback` if it's missing, unreadable or the wrong shape. */
+export function load(raw: string | null, fallback: State): State {
+  try {
+    const s = JSON.parse(raw ?? '')
+    const ok = typeof s?.user === 'string' && [s.rooms, s.tasks, s.log].every(Array.isArray)
+    // The undo copy is dropped: an Undo must never come back after a reload.
+    return ok ? { ...s, before: undefined } : fallback
+  } catch {
+    return fallback
   }
 }

@@ -38,12 +38,14 @@ Scaffold facts that shape the plan:
 **Files:**
 - `index.html`: add `viewport-fit=cover`; title "Next Up".
 - `src/App.tsx`:
-  - one `useReducer`, loaded from `lance-nextup:v1` with try/catch and the seed as fallback; saved in an effect;
+  - one `useReducer((s, a) => reduce(s, a, NOW), …)`, started from `load(localStorage.getItem('lance-nextup:v1'), seed)`; saved in an effect;
   - the demo bar;
   - the toast;
   - ids and times come from `crypto.randomUUID()` and `Date.now()` in event handlers, never in `reduce`.
 - `src/ui.tsx`: pieces Sam reuses in slice 3: `BigButton` (500 ms `disabled` after its label changes), `Toast`, and the chip lookup objects (class names written out in full).
-- `src/Maya.tsx`: Next Up card, list, greyed rows, collapsed Done, bottom bar.
+- `src/Maya.tsx`: Next Up card, list, greyed rows, collapsed Done, bottom bar. It reads `board`, `idle`
+  (nothing to start: no big button) and `roomsLeft` from `rules.ts`, and doesn't repeat any of their logic.
+- Design (see NOTES.md): `system-ui`, the door-plate room number, a neutral white plate for dirty, and green only for inspected.
 - `e2e/maya.spec.ts`. The smoke test stays, as long as the card still says "Next Up".
 
 **Order inside the slice:**
@@ -74,7 +76,7 @@ padding and the 500 ms guard behave differently than in Playwright. Slice 3 star
 **Files:**
 - `src/Maya.tsx`:
   - the "Report problem · 106" button;
-  - the 4-icon grid sheet;
+  - the 4-icon grid sheet, which closes on the first tap so a double tap can't file two reports;
   - the "On hold · AC" badge;
   - the banner with ✕;
   - the done row "Clean · AC fixed by Sam".
@@ -87,7 +89,7 @@ padding and the 500 ms guard behave differently than in Playwright. Slice 3 star
 **Most likely to go wrong:**
 - **AC 7 depends on Sam's screen** to check that the undone task is gone, so Sam's screen comes first in this slice.
 - **The banner pushes the card down** and pushes the list off screen. The slice-2 screenshot already includes the banner.
-- **Category labels must match exactly** across the banner, the badge and the done row ("AC", "Plumbing", "Light", "Broken item"). Keep them in one lookup object in `rules.ts`.
+- **Category labels must match exactly** across the banner, the badge and the done row. They already come from `rules.ts` (`CATEGORY_LABEL`, `holdCategories`, `notices`, and the done reason in `board`), so the UI only displays them.
 
 ---
 

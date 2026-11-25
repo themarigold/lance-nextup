@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { NOW, seed } from './seed'
-import { reduce } from './reduce'
+import { load, reduce } from './reduce'
 import type { Action, State } from './types'
 
 const run = (s: State, ...as: Action[]) => as.reduce((st, a) => reduce(st, a, NOW), s)
@@ -106,5 +106,50 @@ describe('AC 9: undo restores rooms, tasks and pick; the log only grows', () => 
       expect(s.log).toHaveLength(base.log.length + 1)
       expect(s.before).toBeUndefined()
     }
+  })
+})
+
+describe('Review gaps (AC 5, 9)', () => {
+  it('Finish makes the room clean; a report records its own time', () => {
+    const s = run(seed, start('106'), finish('106'), report('r', '103'))
+    expect(s.rooms.find((r) => r.id === '106')?.state).toBe('clean')
+    expect(s.tasks.find((t) => t.id === 'r')?.createdAt).toBe(1500)
+  })
+
+  it('rejects a Start or pick on a clean or inspected room', () => {
+    for (const id of ['101', '102']) {
+      expectRejected(seed, start(id))
+      expectRejected(seed, pick(id))
+    }
+  })
+
+  it('starting the picked room clears the pick', () => {
+    expect(run(seed, pick('104'), start('104')).picked).toBeUndefined()
+  })
+
+  it('a report keeps her pick, and undoing it restores the pick', () => {
+    const s = run(seed, pick('104'), report('r', '104'))
+    expect(s.picked).toBe('104')
+    expect(run(s, undo('r')).picked).toBe('104')
+  })
+
+  it('rejects a second dismiss, a dismiss of an open task, and a switch to the current user', () => {
+    const fixed = run(seed, report('r', '106'), fix('r'))
+    expectRejected(run(fixed, { type: 'dismiss', taskId: 'r', at: 5000 }), { type: 'dismiss', taskId: 'r', at: 6000 })
+    expectRejected(seed, { type: 'dismiss', taskId: 't-204', at: 5000 })
+    expectRejected(seed, { type: 'switchUser', to: 'maya', at: 5000 })
+  })
+})
+
+describe('AC 12: loading saved state', () => {
+  it('drops the saved undo copy, so Undo never comes back after a reload', () => {
+    const s = run(seed, start('106'))
+    const loaded = load(JSON.stringify(s), seed)
+    expect(loaded.rooms).toEqual(s.rooms)
+    expect(loaded.before).toBeUndefined()
+  })
+
+  it('falls back to the seed for missing, unreadable or wrong-shape data', () => {
+    for (const raw of [null, '{not json', 'null', '{}', '{"user":"maya","rooms":[],"tasks":{},"log":[]}']) expect(load(raw, seed)).toBe(seed)
   })
 })

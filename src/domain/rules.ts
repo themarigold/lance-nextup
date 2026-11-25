@@ -14,9 +14,19 @@ export function fmt(min: Minutes): string {
   return `${h % 12 || 12}:${String(min % 60).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`
 }
 
-/** Held while any AC or Plumbing task on the room is not fixed. */
-export const isOnHold = (tasks: Task[], roomId: string) =>
-  tasks.some((t) => t.roomId === roomId && t.status !== 'fixed' && HOLDS.includes(t.category))
+/** Categories holding the room: its AC or Plumbing tasks that aren't fixed. */
+export const holdCategories = (tasks: Task[], roomId: string): Category[] =>
+  tasks.filter((t) => t.roomId === roomId && t.status !== 'fixed' && HOLDS.includes(t.category)).map((t) => t.category)
+
+export const isOnHold = (tasks: Task[], roomId: string) => holdCategories(tasks, roomId).length > 0
+
+const fixedText = (t: Task) => `${CATEGORY_LABEL[t.category]} fixed by Sam`
+
+/** Banners: her reports Sam fixed that she hasn't dismissed. */
+export const notices = (s: State) =>
+  s.tasks
+    .filter((t) => t.reportedBy === s.user && t.status === 'fixed' && !t.noticeDismissed)
+    .map((task) => ({ task, text: `${task.roomId} ${fixedText(task)}` }))
 
 export const isGreyed = (r: Room, now: Minutes) => (r.dndUntil ?? -1) > now || (r.lateCheckout ?? -1) > now
 
@@ -53,8 +63,26 @@ export function board(s: State, now: Minutes): Board {
   return {
     active,
     greyed: todo.filter((r) => !live(r)).map((room) => ({ room, reason: reason(room, now) })).sort(byNumber),
-    done: mine.filter((r) => DONE_WORD[r.state]).map((room) => ({ room, reason: DONE_WORD[room.state]! })).sort(byNumber),
+    done: mine.filter((r) => DONE_WORD[r.state]).map((room) => ({ room, reason: doneReason(s, room) })).sort(byNumber),
   }
+}
+
+// "Clean · AC fixed by Sam": the note stays on the row after she dismisses the banner.
+function doneReason(s: State, room: Room) {
+  const fixed = s.tasks.filter((t) => t.roomId === room.id && t.reportedBy === s.user && t.status === 'fixed')
+  return [DONE_WORD[room.state]!, ...fixed.map(fixedText)].join(' · ')
+}
+
+export const roomsLeft = (b: Board) => b.active.length + b.greyed.length
+
+const opensAt = (r: Room) => Math.max(r.dndUntil ?? -1, r.lateCheckout ?? -1)
+
+/** What the Next Up panel says when there's nothing to start; undefined when there is. */
+export function idle(b: Board): string | undefined {
+  if (b.active.length) return undefined
+  if (!b.greyed.length) return 'All your rooms are done'
+  const first = b.greyed.reduce((a, r) => (opensAt(r.room) < opensAt(a.room) ? r : a))
+  return `Nothing to start. ${first.room.id} opens at ${fmt(opensAt(first.room))}`
 }
 
 /** Holds first, then soonest arrival of the room's next guest, then oldest. */
