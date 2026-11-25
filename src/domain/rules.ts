@@ -20,6 +20,10 @@ export const holdCategories = (tasks: Task[], roomId: string): Category[] =>
 
 export const isOnHold = (tasks: Task[], roomId: string) => holdCategories(tasks, roomId).length > 0
 
+/** Categories already with Sam for this room (open or waiting for a part): the sheet shows them as Reported. */
+export const reportedCategories = (tasks: Task[], roomId: string): Category[] =>
+  tasks.filter((t) => t.roomId === roomId && t.status !== 'fixed').map((t) => t.category)
+
 /** What Sam did with it: "AC fixed by Sam" / "AC needs a part". */
 const outcome = (t: Task) => `${CATEGORY_LABEL[t.category]} ${t.status === 'fixed' ? 'fixed by Sam' : 'needs a part'}`
 
@@ -109,7 +113,11 @@ export function samQueue(s: State): Task[] {
   const arrival = (t: Task) => s.rooms.find((r) => r.id === t.roomId)?.arrival ?? Infinity
   const soft = (t: Task) => (HOLDS.includes(t.category) ? 0 : 1)
   const waiting = (t: Task) => (t.status === 'needs_part' ? 1 : 0)
-  return s.tasks
+  const queue = s.tasks
     .filter((t) => t.status !== 'fixed')
     .sort((a, b) => waiting(a) - waiting(b) || soft(a) - soft(b) || arrival(a) - arrival(b) || a.createdAt - b.createdAt)
+  // His pick becomes Next Up; the rest keep their order (same as Maya's pick).
+  const picked = queue.findIndex((t) => t.id === s.pickedTask)
+  if (picked > 0) queue.unshift(...queue.splice(picked, 1))
+  return queue
 }

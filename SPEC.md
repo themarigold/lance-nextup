@@ -64,6 +64,8 @@ that tapped Report: a double tap on Report must not file a report by itself. Aft
 itself is disabled for 500 ms, because the sheet closes and Report is under the same finger: a double tap on
 a category must not reopen the sheet. It shows
 a toast with Undo. The report reaches Sam immediately, and Undo removes it for both Maya and Sam.
+**No duplicates:** a category the room already has with Sam (open, or waiting for a part) shows as "Reported"
+and is disabled until he fixes it, so a second tap can't send him the same task twice.
 
 **Hold** is derived from tasks and never stored on the room: a room is on hold while it has an open
 AC or Plumbing task. Light and Broken item don't hold. More than one report per room is allowed, and the
@@ -74,7 +76,7 @@ tagged with that action's id. Undo puts that copy back, so undoing a Start retur
 picked. Any other accepted action clears `before`, so only the newest action can be undone. The log
 only grows: `undo` is a new event, and undone actions are left out of the metrics.
 
-**Saving.** Each new state is written to localStorage under `lance-nextup:v1`, and loaded from there on
+**Saving.** Each new state is written to localStorage under `lance-nextup:v2`, and loaded from there on
 start. If it's missing, can't be parsed, or doesn't have `user`, `rooms`, `tasks` and `log` of the right
 kind, the app starts from the seed. The undo copy is never loaded, so an Undo can't come back after a
 reload. Bump the key whenever types.ts changes.
@@ -83,6 +85,9 @@ reload. Bump the key whenever types.ts changes.
 (rooms with no arrival go after), then oldest; tasks waiting on a part go last. His big button is a single
 tap: "Fixed 106 · AC". An outlined "Needs part · 106" button sits in his card (stretch); Fixed still closes
 that task later. Needs part uses the same 500 ms guard, because the next task's button appears in the same spot.
+**His pick:** Sam can tap any row in his list to make it his Next Up, like Maya's pick; the rest keep their
+order. Fixed and Needs part then act on that task, and the pick clears once he does either. The rows share the
+500 ms guard, because after a pick another row moves under the finger.
 
 **Notice back.** When Maya is the active user, each of her reports that Sam fixed and she hasn't
 dismissed shows as a banner: "106 AC fixed by Sam ✕". The banner stays until she taps ✕, and her
@@ -150,6 +155,7 @@ export type Action =
   | { type: 'finish'; id: string; roomId: string; at: number }
   | { type: 'report'; id: string; roomId: string; category: Category; at: number }
   | { type: 'undo'; actionId: string; at: number }  // must match before.actionId
+  | { type: 'pickTask'; taskId: string; at: number }  // Sam taps a row to make it his Next Up
   | { type: 'fix'; taskId: string; at: number }
   | { type: 'dismiss'; taskId: string; at: number }
   | { type: 'switchUser'; to: UserId; at: number }
@@ -161,6 +167,7 @@ export type Action =
 export interface State {
   user: UserId;
   picked?: string;                          // room id she tapped; cleared on start
+  pickedTask?: string;                      // task id Sam tapped; cleared when he fixes it or marks Needs part
   rooms: Room[];
   tasks: Task[];
   before?: { actionId: string; rooms: Room[]; tasks: Task[]; picked?: string };  // set by start/finish/report
@@ -192,7 +199,8 @@ export interface State {
 5. `[u]` `reduce` rejects, returning the *same state object* and adding nothing to the log: a Start while
    another room is in progress, a Start on a greyed room, a Finish on a room that isn't in progress, a pick
    while a room is in progress or on a greyed room, a fix of a task that's already fixed, a Needs part on a
-   task that isn't open, and an undo whose
+   task that isn't open, a report of a category the room already has open or waiting for a part, a Sam
+   pick of a task that's fixed or doesn't exist, and an undo whose
    `actionId` doesn't match `before` (including after a pick has cleared `before`). The tests deep-freeze the
    state, so a `reduce` that changed it in place would throw.
 6. `[e]` After Start 106, two `page.touchscreen.tap` calls 350 ms apart on the big button's position leave
@@ -205,19 +213,25 @@ export interface State {
    Next Up card ("Finish 106", in progress, on hold) until Finish; then its Done row reads "Clean · On hold · AC".
    A double tap (250 ms) on Report problem · 106 opens the sheet but files nothing, and a double tap on Light
    files one report without reopening the sheet. Both tests check which button is really under the finger.
+   After AC is reported, the sheet shows AC as "Reported" and disabled (other categories still work); it stays
+   that way after Needs part and frees up once Sam taps Fixed.
 8. `[u]` Hold is derived: an open AC or Plumbing task holds its room, and Light or Broken doesn't. With two
    holding tasks on 106, fixing one keeps the hold and fixing both lifts it.
 9. `[u]` For each of start, finish and report: undo restores `rooms`, `tasks` and `picked` to their state
    before that action, clears `before`, and the log ends with both the original event and the `undo` event.
    Pick 104, Start, undo: 104 is dirty and still picked.
 10. `[u]` Sam's order: seed + AC on 106 → [106, 204]. Seed + Light on 106 → [106, 204] (an arrival beats
-    an older task). Seed + Light on 108 → [204, 108] (no arrival, so oldest first).
+    an older task). Seed + Light on 108 → [204, 108] (no arrival, so oldest first). With AC on 106 and Plumbing
+    on 103 → [106, 103, 204]; picking 204 → [204, 106, 103]; fixing it → [106, 103]; Needs part on a picked 103
+    → [106, 204, 103].
 11. `[e]` Maya reports AC on 106 and the demo bar switches to Sam. His Next Up is "106 · AC" with a
     "Fixed 106 · AC" button, and one tap shows 204 next. Switching back to Maya shows the banner
     "106 AC fixed by Sam". After ✕ the banner is gone, and once 106 is finished its done row reads
-    "Clean · AC fixed by Sam". With two AC reports on 106, a double tap on "Fixed 106 · AC" fixes only one.
+    "Clean · AC fixed by Sam". With AC and Plumbing on 106, a double tap on "Fixed 106 · AC" fixes only
+    the AC. Sam taps the 204 row: it becomes Next Up ("Fixed 204 · Light", guard re-armed), and after Fixed the
+    usual order is back. A double tap on that row doesn't pick the 106 row that moves under the finger.
 12. `[e]` After Start 106 and a page reload, the button still reads "Finish 106" and 106 is in progress.
-    With unreadable JSON stored under `lance-nextup:v1`, the app loads the seed without errors. (The
+    With unreadable JSON stored under `lance-nextup:v2`, the app loads the seed without errors. (The
     wrong-shape and no-Undo-after-reload rules are unit-tested on `load`.) Reset in the demo bar asks to confirm
     (cancelling keeps the state), then goes back to "Start 106", and a reload stays there.
 

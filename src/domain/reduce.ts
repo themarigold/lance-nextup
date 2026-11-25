@@ -1,4 +1,4 @@
-import { isGreyed } from './rules'
+import { isGreyed, reportedCategories } from './rules'
 import type { Action, CleanState, Minutes, State, Task } from './types'
 
 const UNDOABLE: Action['type'][] = ['start', 'finish', 'report']
@@ -19,6 +19,7 @@ function apply(s: State, a: Action, now: Minutes): State | undefined {
 
   const setRoom = (state: CleanState) => s.rooms.map((r) => (r === room ? { ...r, state } : r))
   const setTask = (patch: Partial<Task>) => s.tasks.map((t) => (t === task ? { ...t, ...patch } : t))
+  const unpick = () => (s.pickedTask === task?.id ? undefined : s.pickedTask)
   const snap = (actionId: string) => ({ actionId, rooms: s.rooms, tasks: s.tasks, picked: s.picked })
 
   switch (a.type) {
@@ -30,6 +31,7 @@ function apply(s: State, a: Action, now: Minutes): State | undefined {
       return room?.state === 'in_progress' ? { ...s, rooms: setRoom('clean'), before: snap(a.id) } : undefined
     case 'report': {
       if (!room || s.tasks.some((t) => t.id === a.id)) return undefined
+      if (reportedCategories(s.tasks, a.roomId).includes(a.category)) return undefined // already with Sam
       const t: Task = { id: a.id, roomId: a.roomId, category: a.category, reportedBy: s.user, createdAt: a.at, status: 'open' }
       return { ...s, tasks: [...s.tasks, t], before: snap(a.id) }
     }
@@ -38,11 +40,14 @@ function apply(s: State, a: Action, now: Minutes): State | undefined {
       const { rooms, tasks, picked } = s.before
       return { ...s, rooms, tasks, picked }
     }
+    case 'pickTask':
+      return task && task.status !== 'fixed' ? { ...s, pickedTask: task.id } : undefined
     // A new outcome gets a fresh banner, even if she dismissed the "needs a part" one.
+    // Acting on Sam's picked task clears the pick, so his usual order comes back.
     case 'fix':
-      return task && task.status !== 'fixed' ? { ...s, tasks: setTask({ status: 'fixed', noticeDismissed: false }) } : undefined
+      return task && task.status !== 'fixed' ? { ...s, tasks: setTask({ status: 'fixed', noticeDismissed: false }), pickedTask: unpick() } : undefined
     case 'needsPart':
-      return task?.status === 'open' ? { ...s, tasks: setTask({ status: 'needs_part', noticeDismissed: false }) } : undefined
+      return task?.status === 'open' ? { ...s, tasks: setTask({ status: 'needs_part', noticeDismissed: false }), pickedTask: unpick() } : undefined
     case 'dismiss':
       return task && task.status !== 'open' && !task.noticeDismissed ? { ...s, tasks: setTask({ noticeDismissed: true }) } : undefined
     case 'switchUser':

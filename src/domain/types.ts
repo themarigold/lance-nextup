@@ -35,6 +35,7 @@ export type Action =
   | { type: 'finish'; id: string; roomId: string; at: number }
   | { type: 'report'; id: string; roomId: string; category: Category; at: number }
   | { type: 'undo'; actionId: string; at: number }  // must match before.actionId
+  | { type: 'pickTask'; taskId: string; at: number }  // Sam taps a row to make it his Next Up
   | { type: 'fix'; taskId: string; at: number }
   | { type: 'dismiss'; taskId: string; at: number }
   | { type: 'switchUser'; to: UserId; at: number }
@@ -46,6 +47,7 @@ export type Action =
 export interface State {
   user: UserId;
   picked?: string;                          // room id she tapped; cleared on start
+  pickedTask?: string;                      // task id Sam tapped; cleared when he fixes it or marks Needs part
   rooms: Room[];
   tasks: Task[];
   before?: { actionId: string; rooms: Room[]; tasks: Task[]; picked?: string };  // set by start/finish/report

@@ -42,10 +42,17 @@ export function Sam({ s, now, act }: { s: State; now: Minutes; act: (a: Action) 
 
       <ul>
         {rest.map((t) => (
-          <li key={t.id} className="min-h-16 flex items-center gap-4 px-4 border-b border-black/20">
-            <span className="w-14 text-[22px] font-bold tabular-nums">{t.roomId}</span>
-            <span className="flex items-center gap-2 text-lg font-semibold"><Icon name={t.category} />{CATEGORY_LABEL[t.category]}</span>
-            <span className="flex-1 text-base text-muted text-right text-balance">{taskReason(s, t, now)}</span>
+          <li key={t.id} className="border-b border-black/20">
+            {/* Tap a row to make it his Next Up, like Maya's pick; Fixed and Needs part then act on it. */}
+            <button
+              disabled={!armed}
+              onClick={() => act({ type: 'pickTask', taskId: t.id, at: Date.now() })}
+              className="w-full min-h-16 flex items-center gap-4 px-4 text-left touch-manipulation active:bg-wash"
+            >
+              <span className="w-14 text-[22px] font-bold tabular-nums">{t.roomId}</span>
+              <span className="flex items-center gap-2 text-lg font-semibold"><Icon name={t.category} />{CATEGORY_LABEL[t.category]}</span>
+              <span className="flex-1 text-base text-muted text-right text-balance">{taskReason(s, t, now)}</span>
+            </button>
           </li>
         ))}
       </ul>

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { NOW, seed } from './seed'
-import { board, fmt, holdCategories, idle, isOnHold, notices, roomsLeft, samQueue, taskReason } from './rules'
+import { board, fmt, holdCategories, idle, isOnHold, notices, reportedCategories, roomsLeft, samQueue, taskReason } from './rules'
 import { reduce } from './reduce'
 import type { Action, Category, Room, State } from './types'
 
@@ -218,5 +218,35 @@ describe('Done row while held, and AC 13: Needs part', () => {
     expect(isOnHold(fixed.tasks, '106')).toBe(false)
     expect(samQueue(fixed).map((t) => t.roomId)).toEqual(['204'])
     expect(notices(fixed).map((n) => n.text)).toEqual(['106 AC fixed by Sam'])
+  })
+})
+
+describe("Sam's pick (AC 10, 11)", () => {
+  const pickTask = (taskId: string): Action => ({ type: 'pickTask', taskId, at: 3000 })
+  const needsPart = (taskId: string): Action => ({ type: 'needsPart', taskId, at: 3500 })
+  const rooms = (s: State) => samQueue(s).map((t) => t.roomId)
+  const base = () => run(seed, report('r', '106', 'ac'), report('p', '103', 'plumbing'))
+
+  it('a tapped row becomes his Next Up; the rest keep their order', () => {
+    expect(rooms(base())).toEqual(['106', '103', '204'])
+    expect(rooms(run(base(), pickTask('t-204')))).toEqual(['204', '106', '103'])
+  })
+
+  it('fixing the picked task clears the pick, so the usual order comes back', () => {
+    const s = run(base(), pickTask('t-204'), fix('t-204'))
+    expect(s.pickedTask).toBeUndefined()
+    expect(rooms(s)).toEqual(['106', '103'])
+  })
+
+  it('Needs part on the picked task clears the pick and sends it to the bottom', () => {
+    const s = run(base(), pickTask('p'), needsPart('p'))
+    expect(s.pickedTask).toBeUndefined()
+    expect(rooms(s)).toEqual(['106', '204', '103'])
+  })
+
+  it('the sheet knows which categories are already reported on a room (needs part counts)', () => {
+    const s = run(base(), needsPart('r'))
+    expect(reportedCategories(s.tasks, '106')).toEqual(['ac'])
+    expect(reportedCategories(run(s, fix('r')).tasks, '106')).toEqual([])
   })
 })

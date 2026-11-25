@@ -83,6 +83,14 @@
   user, so it replays `switchUser`, and a switch counts as opening the app as that user. `reduce` now accepts
   `open` (it's only logged), and the app logs one on load. In dev, StrictMode logs it twice; the metric uses
   the latest open before a Start, so that's harmless.
+- **No duplicate reports:** a category the room already has with Sam (open, or waiting for a part) shows as
+  "Reported" and is disabled until he fixes it. `reduce` rejects the duplicate too, so the rule holds outside
+  the UI. As a result, two tasks of the same category on one room can't happen any more, so the tests that used
+  two AC tasks now use AC plus Plumbing. The Undo test still covers the guard re-arming when the label comes
+  back unchanged.
+- **Sam's pick:** he taps a row to make it his Next Up (`pickTask`, `state.pickedTask`). Fixed and Needs part
+  act on it, and the pick clears once he does. The rows share the 500 ms guard. This changed `types.ts`, so the
+  saved-data key is now `lance-nextup:v2`; old v1 data is ignored and the app starts from the seed.
 
 ## Cuts
 - A "Back to suggested" button after picking a row. Safari doesn't fire a tap when she scrolls, and

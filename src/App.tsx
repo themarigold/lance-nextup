@@ -7,7 +7,7 @@ import { Maya } from './Maya'
 import { Sam } from './Sam'
 import { Toast } from './ui'
 
-const KEY = 'lance-nextup:v1'
+const KEY = 'lance-nextup:v2'
 
 function initial(): State {
   try {

@@ -171,3 +171,25 @@ describe('AC 13: Needs part rejections', () => {
     expectRejected(run(waiting, fix('r')), needsPart('r'))
   })
 })
+
+describe('No duplicate reports, and Sam picks a task (AC 5)', () => {
+  const reportAs = (id: string, roomId: string, category: 'ac' | 'plumbing'): Action => ({ type: 'report', id, roomId, category, at: 1500 })
+  const pickTask = (taskId: string): Action => ({ type: 'pickTask', taskId, at: 600 })
+
+  it('rejects a second report of a category the room already has open, including one waiting for a part', () => {
+    const s = run(seed, report('r', '106'))
+    expectRejected(s, report('r2', '106'))
+    expectRejected(run(s, { type: 'needsPart', taskId: 'r', at: 2000 }), report('r2', '106'))
+  })
+
+  it('accepts a different category on the same room, or the same one again once it is fixed', () => {
+    const s = run(seed, report('r', '106'))
+    expect(run(s, reportAs('p', '106', 'plumbing')).tasks).toHaveLength(3)
+    expect(run(s, fix('r'), report('r2', '106')).tasks).toHaveLength(3)
+  })
+
+  it('rejects a pick of a task that is fixed or does not exist', () => {
+    expectRejected(run(seed, fix('t-204')), pickTask('t-204'))
+    expectRejected(seed, pickTask('nope'))
+  })
+})

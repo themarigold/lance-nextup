@@ -156,7 +156,7 @@ test('AC 12: state survives a reload; unreadable saved data loads the seed', asy
   await expect(nextUp(page).getByText('In progress', { exact: true })).toBeVisible()
   await expect(toast(page)).toHaveCount(0) // no Undo comes back after a reload
 
-  await page.evaluate(() => localStorage.setItem('lance-nextup:v1', '{not json'))
+  await page.evaluate(() => localStorage.setItem('lance-nextup:v2', '{not json'))
   await page.reload()
   await expect(big(page)).toHaveText('Start 106')
   await assertPhoneRules(page)

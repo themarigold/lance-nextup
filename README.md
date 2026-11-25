@@ -88,7 +88,7 @@ npm run check    # build, then the Vitest domain tests, then Playwright on an iP
   between Maya and Sam waits up to 5 s while a toast is showing.
 - **The clock is fixed at 10:15 am,** so nothing time-based can drift during a demo. Tradeoff: DND and late
   checkout never expire in the app, and the 12:05 pm order only exists in the tests (and the table above).
-- **State is saved across reloads** (`localStorage`, key `lance-nextup:v1`), so a phone recording survives
+- **State is saved across reloads** (`localStorage`, key `lance-nextup:v2`), so a phone recording survives
   a reload. Reset clears it for the next take.
 - **Metrics are calculated, not shown:**
   - **Main:** Finish → next Start. That's the decision she makes every room.

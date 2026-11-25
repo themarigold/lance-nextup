@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { board, CATEGORY_LABEL, holdCategories, idle, notices } from './domain/rules'
+import { board, CATEGORY_LABEL, holdCategories, idle, notices, reportedCategories } from './domain/rules'
 import type { Action, Category, Minutes, State } from './domain/types'
 import { BigButton, HoldChip, Icon, OccupancyChip, PLATE, StateChip, useArmed } from './ui'
 
 const CATEGORIES: Category[] = ['ac', 'plumbing', 'light', 'broken']
 
 /** Tap 2 of the report: one tap files it. No typing, no send button; the toast's Undo is the safety net. */
-function ReportSheet({ roomId, onPick, onClose }: { roomId: string; onPick: (c: Category) => void; onClose: () => void }) {
+function ReportSheet({ roomId, reported, onPick, onClose }: { roomId: string; reported: Category[]; onPick: (c: Category) => void; onClose: () => void }) {
   // The sheet opens under the finger that tapped Report: a double tap must not file a report by itself.
   const armed = useArmed(roomId)
   return (
@@ -20,12 +20,14 @@ function ReportSheet({ roomId, onPick, onClose }: { roomId: string; onPick: (c: 
         {CATEGORIES.map((c) => (
           <button
             key={c}
-            disabled={!armed}
+            // Already with Sam (open or waiting for a part): no duplicate task until he fixes it.
+            disabled={!armed || reported.includes(c)}
             onClick={() => onPick(c)}
-            className="h-32 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash disabled:text-muted disabled:border-muted"
+            className="h-32 flex flex-col items-center justify-center gap-1 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash disabled:text-muted disabled:border-muted"
           >
             <Icon name={c} big />
             {CATEGORY_LABEL[c]}
+            {reported.includes(c) && <span className="text-base font-semibold">Reported</span>}
           </button>
         ))}
       </div>
@@ -50,6 +52,7 @@ export function Maya({ s, now, act }: { s: State; now: Minutes; act: (a: Action)
       {sheet && next && (
         <ReportSheet
           roomId={next.room.id}
+          reported={reportedCategories(s.tasks, next.room.id)}
           onClose={() => setSheet(false)}
           onPick={(category) => {
             setSheet(false) // closes on the first tap, so a double tap can't file two reports
