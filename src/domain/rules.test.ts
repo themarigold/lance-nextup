@@ -53,6 +53,16 @@ describe('AC 2: order at 12:05 pm and the 2-hour boundary', () => {
     expect(ids(board(with108Arriving(NOW + 121), NOW).active)).toEqual(['106', '103', '108', '104'])
   })
 
+  it('stops greying a DND or late checkout that ends exactly now', () => {
+    const endsNow: State = {
+      ...seed,
+      rooms: seed.rooms.map((r) => (r.id === '105' ? { ...r, dndUntil: NOW } : r.id === '107' ? { ...r, lateCheckout: NOW } : r)),
+    }
+    const b = board(endsNow, NOW)
+    expect(ids(b.active)).toEqual(['106', '103', '107', '108', '104', '105'])
+    expect(b.greyed).toEqual([])
+  })
+
   it('formats 12-hour times with am/pm', () => {
     expect([fmt(0), fmt(615), fmt(720), fmt(840)]).toEqual(['12:00 am', '10:15 am', '12:00 pm', '2:00 pm'])
   })

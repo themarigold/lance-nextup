@@ -34,6 +34,20 @@ describe('AC 5: reduce rejects invalid actions', () => {
     expectRejected(seed, start('107'))
   })
 
+  it('accepts a Start once DND or late checkout ends exactly now', () => {
+    const endsNow: State = {
+      ...seed,
+      rooms: seed.rooms.map((r) => (r.id === '105' ? { ...r, dndUntil: NOW } : r.id === '107' ? { ...r, lateCheckout: NOW } : r)),
+    }
+    expect(reduce(endsNow, start('105'), NOW)).not.toBe(endsNow)
+    expect(reduce(endsNow, start('107'), NOW)).not.toBe(endsNow)
+  })
+
+  it("rejects a Start or pick on someone else's room (Priya's 204)", () => {
+    expectRejected(seed, start('204'))
+    expectRejected(seed, pick('204'))
+  })
+
   it('rejects a Finish on a room that is not in progress', () => {
     expectRejected(seed, finish('106'))
   })
