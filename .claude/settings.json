@@ -1,0 +1,18 @@
+{
+  "env": {
+    "PONYTAIL_SUBAGENT_MATCHER": "^none$"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run:*)",
+      "Bash(npx vitest:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
+    ],
+    "deny": ["Bash(git push:*)"]
+  }
+}
