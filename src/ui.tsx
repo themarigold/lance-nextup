@@ -59,8 +59,9 @@ export const HoldChip = ({ category, text }: { category: Category; text: string 
  * accepted action (e.g. the log length), not just the label: after an Undo, or a second task on the same
  * room, the label comes back unchanged but the guard must still re-arm.
  */
-export function useArmed(key: string) {
-  const [armedFor, setArmedFor] = useState<string>()
+export function useArmed(key: string, { armedAtStart = false } = {}) {
+  // armedAtStart: usable as soon as it appears; only a later change of `key` disarms it.
+  const [armedFor, setArmedFor] = useState<string | undefined>(armedAtStart ? key : undefined)
   useEffect(() => {
     const t = setTimeout(() => setArmedFor(key), 500)
     return () => clearTimeout(t)

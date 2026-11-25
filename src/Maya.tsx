@@ -40,6 +40,10 @@ export function Maya({ s, now, act }: { s: State; now: Minutes; act: (a: Action)
   const working = next?.room.state === 'in_progress'
   const at = Date.now
   const [sheet, setSheet] = useState(false)
+  // After a report the sheet closes and Report is under the same finger: a double tap on a category
+  // must not reopen the sheet (she'd think it didn't send). Disarms only when the task list changes,
+  // not on load or a user switch.
+  const reportArmed = useArmed(`${s.tasks.length}`, { armedAtStart: true })
 
   return (
     <>
@@ -86,8 +90,9 @@ export function Maya({ s, now, act }: { s: State; now: Minutes; act: (a: Action)
               ))}
             </div>
             <button
+              disabled={!reportArmed}
               onClick={() => setSheet(true)}
-              className="mt-4 w-full h-14 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash"
+              className="mt-4 w-full h-14 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash disabled:text-muted disabled:border-muted"
             >
               Report problem · {next.room.id}
             </button>

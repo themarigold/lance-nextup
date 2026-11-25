@@ -128,8 +128,17 @@ test('AC 12: Reset in the demo bar goes back to the seed and stays there after a
   await page.goto('/')
   await tapBig(page, 'Start 106')
   await expect(toast(page)).toHaveCount(0, { timeout: 7000 }) // the toast covers the demo bar for 5 s
-  page.once('dialog', (d) => d.accept())
+
+  // It must ask first: cancelling keeps the shift as it was.
+  const asked: string[] = []
+  page.once('dialog', (d) => { asked.push(d.message()); void d.dismiss() })
   await page.getByRole('button', { name: 'Reset' }).tap()
+  await expect.poll(() => asked).toEqual(['Reset the demo to the start of the shift?'])
+  await expect(big(page)).toHaveText('Finish 106')
+
+  page.once('dialog', (d) => { asked.push(d.message()); void d.accept() })
+  await page.getByRole('button', { name: 'Reset' }).tap()
+  await expect.poll(() => asked).toHaveLength(2)
   await expect(big(page)).toHaveText('Start 106')
   await page.reload()
   await expect(big(page)).toHaveText('Start 106')

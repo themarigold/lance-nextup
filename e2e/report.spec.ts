@@ -40,12 +40,22 @@ test('AC 7: two taps report AC on 106, which goes on hold and stays Next Up', as
   expect(errs).toEqual([])
 })
 
-/** Two raw touches on the same spot, `gap` ms apart: a real double tap. */
-async function doubleTap(page: Page, name: string, gap = 250) {
-  const box = (await page.getByRole('button', { name }).boundingBox())!
-  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2]
+/**
+ * A real double tap: two raw touches on the same spot, `gap` ms apart, on the button called `name`.
+ * Before the second touch it checks which button is actually under the finger (`under`) and that it's
+ * disabled, so the test never relies on WebKit snapping a touch that landed in a gap.
+ */
+async function doubleTap(page: Page, name: string, under: string, gap = 250) {
+  const box = (await page.getByRole('button', { name, exact: true }).boundingBox())!
+  const [x, y] = [box.x + 40, box.y + box.height / 2] // off-centre: inside a button on both screens, not a gap
   await page.touchscreen.tap(x, y)
-  await page.waitForTimeout(gap)
+  await page.waitForTimeout(100)
+  const hit = await page.evaluate(([px, py]) => {
+    const b = document.elementFromPoint(px, py)?.closest('button')
+    return { text: b?.textContent?.trim(), disabled: b?.disabled }
+  }, [x, y])
+  expect(hit).toEqual({ text: under, disabled: true })
+  await page.waitForTimeout(gap - 100)
   await page.touchscreen.tap(x, y)
   await page.waitForTimeout(700) // past the guard: a tap that got through has had time to act
 }
@@ -53,13 +63,30 @@ async function doubleTap(page: Page, name: string, gap = 250) {
 test('AC 7: a double tap on Report problem opens the sheet but files nothing', async ({ page }) => {
   const errs = trackErrors(page)
   await page.goto('/')
-  await doubleTap(page, 'Report problem · 106')
+  await doubleTap(page, 'Report problem · 106', 'Light')
   await expect(page.getByRole('dialog', { name: 'Problem in 106' })).toBeVisible()
   await expect(toast(page)).toHaveCount(0)
   await page.getByRole('button', { name: 'Close' }).tap()
   await expect(nextUp(page).getByText(/On hold/)).toHaveCount(0)
   await user(page, 'Sam').tap()
   await expect(page.locator('main')).not.toContainText('106') // Sam got nothing
+  expect(errs).toEqual([])
+})
+
+test('AC 7: a double tap on Light files one report and does not reopen the sheet', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Report problem · 106' }).tap()
+  await expect(page.getByRole('button', { name: 'Light', exact: true })).toBeEnabled()
+  await doubleTap(page, 'Light', 'Report problem · 106') // the sheet closes; Report is under the finger
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(toast(page)).toContainText('Light reported on 106')
+  await expect(page.getByRole('button', { name: 'Report problem · 106' })).toBeEnabled() // and it comes back
+
+  await expect(toast(page)).toHaveCount(0, { timeout: 7000 })
+  await user(page, 'Sam').tap()
+  await expect(big(page)).toHaveText('Fixed 106 · Light')
+  await expect(page.locator('li', { hasText: '106' })).toHaveCount(0) // only one 106 task
   expect(errs).toEqual([])
 })
 
@@ -140,7 +167,7 @@ test('AC 13: a double tap on Needs part · 106 does not also mark 204', async ({
   await expect(toast(page)).toHaveCount(0, { timeout: 7000 })
   await user(page, 'Sam').tap()
   await expect(page.getByRole('button', { name: 'Needs part · 106' })).toBeEnabled()
-  await doubleTap(page, 'Needs part · 106')
+  await doubleTap(page, 'Needs part · 106', 'Needs part · 204')
   await expect(big(page)).toHaveText('Fixed 204 · Light')
   await expect(page.getByRole('button', { name: 'Needs part · 204' })).toBeVisible() // 204 is still open
   expect(errs).toEqual([])
@@ -175,5 +202,23 @@ test('AC 11: Sam fixes 106 in one tap; Maya gets the banner and the done-row not
   await tapBig(page, 'Finish 106')
   await page.getByText(/^Done \(/).tap()
   await expect(page.locator('details li', { hasText: '106' })).toContainText('Clean · AC fixed by Sam')
+  expect(errs).toEqual([])
+})
+
+test('AC 11: two AC reports on 106; a double tap on Fixed 106 · AC fixes only one', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await reportAC(page)
+  await reportAC(page) // a second AC task on the same room: Sam's label won't change between them
+  await expect(toast(page)).toHaveCount(0, { timeout: 7000 })
+
+  await user(page, 'Sam').tap()
+  await expect(big(page)).toHaveText('Fixed 106 · AC')
+  await expect(big(page)).toBeEnabled()
+  await doubleTap(page, 'Fixed 106 · AC', 'Fixed 106 · AC', 350) // same label, but the guard re-armed
+  await expect(big(page)).toHaveText('Fixed 106 · AC') // the second AC task is still open
+
+  await user(page, 'Maya').tap()
+  await expect(nextUp(page).getByText('On hold · AC')).toBeVisible() // still held by the other task
   expect(errs).toEqual([])
 })

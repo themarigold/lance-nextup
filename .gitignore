@@ -29,3 +29,6 @@ test-results/
 playwright-report/
 ref/
 .vercel
+
+# Agent worktrees (temporary copies of the repo)
+.claude/worktrees/

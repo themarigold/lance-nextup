@@ -49,7 +49,8 @@ Undo or a second task on the same room, where the label comes back unchanged.
 **Toast** sits at the **top** of the screen, covering the demo bar and well away from the big button,
 so Undo is never just above Start. While it shows, switching users waits until it's gone (up to 5 s). One toast at a time: a new one replaces the old, so Undo always
 means the last thing she did. Each toast lasts 5 s, and it disappears early as soon as any other action
-is accepted (a pick, a user switch, a dismiss). The toast text stays on one line: Start shows
+is accepted (a pick or a dismiss; a user switch can't happen while it covers the demo bar). The toast
+text stays on one line: Start shows
 "Started 106 · Undo", and Finish shows "106 clean · 5 left · Undo".
 **After Finish or a pick** the page scrolls back to the top, so the new Next Up plate is fully visible and
 not under the toast.
@@ -59,7 +60,9 @@ not under the toast.
 AC (snowflake) · Plumbing (drop) · Light (bulb) · Broken item (wrench), each a plain black line
 icon with its word. No emoji: colour only means cleaning state, and emoji look different on Android. Tap 2 files the report: no typing, no send button. The grid closes on that tap, so a double tap can't
 file two reports. Its four buttons are disabled for the first 500 ms, because the grid opens under the finger
-that tapped Report: a double tap on Report must not file a report by itself. It shows
+that tapped Report: a double tap on Report must not file a report by itself. After a report, Report
+itself is disabled for 500 ms, because the sheet closes and Report is under the same finger: a double tap on
+a category must not reopen the sheet. It shows
 a toast with Undo. The report reaches Sam immediately, and Undo removes it for both Maya and Sam.
 
 **Hold** is derived from tasks and never stored on the room: a room is on hold while it has an open
@@ -200,7 +203,8 @@ export interface State {
    shows an "On hold · AC" badge and stays Next Up. A second run: tapping Undo removes the badge, and Sam's
    list doesn't have the task. The demo path: Start 106, report AC while it's in progress, and 106 stays the
    Next Up card ("Finish 106", in progress, on hold) until Finish; then its Done row reads "Clean · On hold · AC".
-   A double tap (250 ms) on Report problem · 106 opens the sheet but files nothing.
+   A double tap (250 ms) on Report problem · 106 opens the sheet but files nothing, and a double tap on Light
+   files one report without reopening the sheet. Both tests check which button is really under the finger.
 8. `[u]` Hold is derived: an open AC or Plumbing task holds its room, and Light or Broken doesn't. With two
    holding tasks on 106, fixing one keeps the hold and fixing both lifts it.
 9. `[u]` For each of start, finish and report: undo restores `rooms`, `tasks` and `picked` to their state
@@ -211,11 +215,11 @@ export interface State {
 11. `[e]` Maya reports AC on 106 and the demo bar switches to Sam. His Next Up is "106 · AC" with a
     "Fixed 106 · AC" button, and one tap shows 204 next. Switching back to Maya shows the banner
     "106 AC fixed by Sam". After ✕ the banner is gone, and once 106 is finished its done row reads
-    "Clean · AC fixed by Sam".
+    "Clean · AC fixed by Sam". With two AC reports on 106, a double tap on "Fixed 106 · AC" fixes only one.
 12. `[e]` After Start 106 and a page reload, the button still reads "Finish 106" and 106 is in progress.
     With unreadable JSON stored under `lance-nextup:v1`, the app loads the seed without errors. (The
-    wrong-shape and no-Undo-after-reload rules are unit-tested on `load`.) Reset in the demo bar goes back to
-    "Start 106", and a reload stays there.
+    wrong-shape and no-Undo-after-reload rules are unit-tested on `load`.) Reset in the demo bar asks to confirm
+    (cancelling keeps the state), then goes back to "Start 106", and a reload stays there.
 
 **Stretch** (in this order)
 13. `[u]` `[e]` Needs part: the task becomes `needs_part`, the hold stays, it drops to the bottom of Sam's
