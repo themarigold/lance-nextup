@@ -47,8 +47,10 @@ function apply(s: State, a: Action, now: Minutes): State | undefined {
       return task && task.status !== 'open' && !task.noticeDismissed ? { ...s, tasks: setTask({ noticeDismissed: true }) } : undefined
     case 'switchUser':
       return a.to !== s.user ? { ...s, user: a.to } : undefined
+    case 'open':
+      return { ...s } // log-only: marks "app opened" for the open → first Start metric
     default:
-      return undefined // stretch actions (stop, open) are rejected until built
+      return undefined // stop is next steps, rejected
   }
 }
 

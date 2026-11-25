@@ -227,12 +227,14 @@ export interface State {
     the hold lifts and the "fixed" banner shows, even if she dismissed the "needs a part" one. In the browser:
     after fixing 204, "Fixed 106 · AC" on the waiting task leaves "No open problems" and no big button. A
     double tap on Needs part · 106 doesn't also mark 204. Plumbing behaves the same as AC (unit).
-14. `[e]` Stop: on an in-progress room, Stop returns it to dirty and to its usual place in the order. The big
-    button then reads "Start <that room>".
+14. `[e]` *Not built, moved to next steps.* Stop: on an in-progress room, Stop returns it to dirty and to its
+    usual place in the order. The big button then reads "Start <that room>".
 15. `[u]` Metrics, from a fixture log with one undone Start and one undone report: each user gets their
     Finish → next Start times (main) and their open → first Start time (secondary), with undone actions left
     out. The undo rate is undone Starts and Finishes divided by all Starts and Finishes, so in this fixture
-    the undone Start counts and the undone report doesn't.
+    the undone Start counts and the undone report doesn't. (`metrics(log, firstUser)` in src/domain/metrics.ts,
+    with no UI. Actions don't carry a user, so it replays `switchUser`, and a switch counts as opening the app
+    as that user. The app logs `open` on load.)
 
 Also stretch, with no AC until it's picked up: reporting a problem from a done row.
 
@@ -245,6 +247,8 @@ Also stretch, with no AC until it's picked up: reporting a problem from a done r
 5. Stretch, in the order listed.
 
 ## Out of scope / next steps
+- Stop (AC 14): put an in-progress room back to dirty.
+- A screen or export for the metrics (today they're only calculated, in src/domain/metrics.ts).
 - Lock problems (a lock should hold the room). Today it sits in Broken item, which doesn't hold.
 - Undo for Sam's Fixed. A mis-tap today sends Maya a false "fixed" banner.
 - Atkinson Hyperlegible Next font. 1/l/I and 0/O look clearly different, which helps with room numbers

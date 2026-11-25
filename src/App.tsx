@@ -30,6 +30,9 @@ export default function App() {
   const [s, dispatch] = useReducer((st: State, a: Action) => reduce(st, a, NOW), undefined, initial)
   const [toast, setToast] = useState<{ id: string; text: string }>()
 
+  // Log "app opened" for the open → first Start metric (a user switch counts as an open too).
+  useEffect(() => dispatch({ type: 'open', at: Date.now() }), [])
+
   useEffect(() => {
     try {
       localStorage.setItem(KEY, JSON.stringify(s))

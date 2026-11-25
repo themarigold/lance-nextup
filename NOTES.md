@@ -78,6 +78,11 @@
     - AC 5 deep-freezes the state;
     - AC 13 in the browser, through Fixed and to Sam's empty screen;
     - Plumbing through Needs part.
+- **Metrics (AC 15):** calculation only, no UI (`metrics(log, firstUser)` in src/domain/metrics.ts). Undone
+  actions are left out of the times; the undo rate counts only Starts and Finishes. Actions don't record a
+  user, so it replays `switchUser`, and a switch counts as opening the app as that user. `reduce` now accepts
+  `open` (it's only logged), and the app logs one on load. In dev, StrictMode logs it twice; the metric uses
+  the latest open before a Start, so that's harmless.
 
 ## Cuts
 - A "Back to suggested" button after picking a row. Safari doesn't fire a tap when she scrolls, and
@@ -86,7 +91,9 @@
 - A send button, typing, or photos in the report.
 
 ## Deferred
-- Stretch left: metrics, Stop, reporting from a done row.
+- Stop (AC 14): skipped for now, in the spec's next steps.
+- Reporting from a done row (stretch, never picked up).
+- A screen or export for the metrics.
 - Lock problems should hold the room. For now a lock is filed under Broken item, which doesn't hold.
 - Undo for Sam's Fixed.
 - Atkinson Hyperlegible Next font (one self-hosted .woff2), for clearer 1/l/I and 0/O. `system-ui` for now.

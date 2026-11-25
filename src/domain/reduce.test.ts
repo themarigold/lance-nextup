@@ -109,7 +109,7 @@ describe('AC 9: undo restores rooms, tasks and pick; the log only grows', () => 
   it('any other accepted action clears before (pick, fix, dismiss, switchUser)', () => {
     const base = run(seed, report('r', '103'), fix('r'), start('106'), finish('106'))
     expect(base.before?.actionId).toBe('f-106')
-    const others: Action[] = [pick('104'), fix('t-204'), { type: 'dismiss', taskId: 'r', at: 5000 }, { type: 'switchUser', to: 'sam', at: 5000 }]
+    const others: Action[] = [pick('104'), fix('t-204'), { type: 'dismiss', taskId: 'r', at: 5000 }, { type: 'switchUser', to: 'sam', at: 5000 }, { type: 'open', at: 5000 }]
     for (const a of others) {
       const s = reduce(base, a, NOW)
       expect(s.log).toHaveLength(base.log.length + 1)
