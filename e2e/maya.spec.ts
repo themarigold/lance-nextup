@@ -16,7 +16,7 @@ test('AC 3: Next Up shows 106 with its reason, chips and button; greyed rooms; w
   const errs = trackErrors(page)
   await page.goto('/')
   const card = nextUp(page)
-  await expect(card).toContainText('106')
+  await expect(card.getByText('106', { exact: true })).toBeVisible() // the plate itself, not "Report problem · 106"
   await expect(card).toContainText('Guest arrives 11:30 am')
   await expect(card).toContainText('VIP')
   await expect(card.getByText('Vacant', { exact: true })).toBeVisible()
@@ -28,6 +28,10 @@ test('AC 3: Next Up shows 106 with its reason, chips and button; greyed rooms; w
   await expect(page.getByText('Do not disturb until 10:45 am')).toBeVisible()
   await expect(page.getByText('Late checkout 12:00 pm')).toBeVisible()
   await expect(page.getByRole('button', { name: /^10[57]\b/ })).toHaveCount(0)
+  for (const reason of ['Do not disturb until 10:45 am', 'Late checkout 12:00 pm']) {
+    const bg = await page.locator('li', { hasText: reason }).evaluate((e) => getComputedStyle(e).backgroundColor)
+    expect(bg).toBe('rgb(238, 238, 238)') // the grey wash, not the white of active rows
+  }
 
   await page.getByText(/^Done \(/).tap() // open Done so its text is checked too
   const text = await page.locator('body').innerText()
@@ -105,6 +109,31 @@ test('AC 6: a second tap 350 ms after Finish 106 does not start 103', async ({ p
   await expect(nextUp(page).getByText('Dirty', { exact: true })).toBeVisible()
   await page.getByText(/^Done \(/).tap()
   await expect(page.locator('details li', { hasText: '106' })).toContainText('Clean')
+  expect(errs).toEqual([])
+})
+
+test('AC 6: the guard re-arms after Undo, even though the label comes back unchanged', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await tapBig(page, 'Start 106')
+  await toast(page).getByRole('button', { name: 'Undo' }).tap() // well inside 500 ms of the Start
+  await expect(big(page)).toHaveText('Start 106')
+  await expect(big(page)).toBeDisabled()
+  await expect(big(page)).toBeEnabled() // and it comes back after the guard
+  expect(errs).toEqual([])
+})
+
+test('AC 12: Reset in the demo bar goes back to the seed and stays there after a reload', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await tapBig(page, 'Start 106')
+  await expect(toast(page)).toHaveCount(0, { timeout: 7000 }) // the toast covers the demo bar for 5 s
+  page.once('dialog', (d) => d.accept())
+  await page.getByRole('button', { name: 'Reset' }).tap()
+  await expect(big(page)).toHaveText('Start 106')
+  await page.reload()
+  await expect(big(page)).toHaveText('Start 106')
+  await assertPhoneRules(page)
   expect(errs).toEqual([])
 })
 

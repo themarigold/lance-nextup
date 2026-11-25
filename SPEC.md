@@ -40,13 +40,14 @@ VIP is shown as a badge but doesn't change the order. A room on hold keeps its p
 the room being sold, not the cleaning.
 
 **Big button** (bottom bar, safe-area padded) always names the room: "Start 106" → "Finish 106".
-For 500 ms after its room or label changes it is `disabled` (it looks dimmed and ignores taps).
+For 500 ms after any accepted action it is `disabled` (it looks dimmed and ignores taps). That includes an
+Undo or a second task on the same room, where the label comes back unchanged.
 **Nothing to start:** when only greyed rooms are left, the Next Up panel says when the next one opens
 ("Nothing to start. 105 opens at 10:45 am") and the big button is hidden. When every room is done it says
 "All your rooms are done".
 
-**Toast** sits at the **top** of the screen, under the demo bar and well away from the big button,
-so Undo is never just above Start. One toast at a time: a new one replaces the old, so Undo always
+**Toast** sits at the **top** of the screen, covering the demo bar and well away from the big button,
+so Undo is never just above Start. While it shows, switching users waits until it's gone (up to 5 s). One toast at a time: a new one replaces the old, so Undo always
 means the last thing she did. Each toast lasts 5 s, and it disappears early as soon as any other action
 is accepted (a pick, a user switch, a dismiss). The toast text stays on one line: Start shows
 "Started 106 · Undo", and Finish shows "106 clean · 5 left · Undo".
@@ -57,7 +58,8 @@ not under the toast.
 (deliberately not in the bottom bar, so she can't confuse it with Finish). Tap 1 opens a 4-icon grid:
 AC (snowflake) · Plumbing (drop) · Light (bulb) · Broken item (wrench), each a plain black line
 icon with its word. No emoji: colour only means cleaning state, and emoji look different on Android. Tap 2 files the report: no typing, no send button. The grid closes on that tap, so a double tap can't
-file two reports. It shows
+file two reports. Its four buttons are disabled for the first 500 ms, because the grid opens under the finger
+that tapped Report: a double tap on Report must not file a report by itself. It shows
 a toast with Undo. The report reaches Sam immediately, and Undo removes it for both Maya and Sam.
 
 **Hold** is derived from tasks and never stored on the room: a room is on hold while it has an open
@@ -77,13 +79,14 @@ reload. Bump the key whenever types.ts changes.
 **Sam's order:** tasks that hold their room first, then soonest arrival of that room's next guest
 (rooms with no arrival go after), then oldest; tasks waiting on a part go last. His big button is a single
 tap: "Fixed 106 · AC". An outlined "Needs part · 106" button sits in his card (stretch); Fixed still closes
-that task later.
+that task later. Needs part uses the same 500 ms guard, because the next task's button appears in the same spot.
 
 **Notice back.** When Maya is the active user, each of her reports that Sam fixed and she hasn't
 dismissed shows as a banner: "106 AC fixed by Sam ✕". The banner stays until she taps ✕, and her
 done row for that room keeps "AC fixed by Sam".
 
-**Demo bar** (top): Maya | Sam.
+**Demo bar** (top): Maya | Sam | Reset. Reset is demo-only: it asks to confirm, clears the saved state,
+and reloads the 10:15 am seed, so a second take starts clean. It sits in the demo bar, far from the big button.
 
 **README** shows Maya's order at both 10:15 am and 12:05 pm, because the fixed clock means the app only
 ever shows the first.
@@ -174,7 +177,8 @@ export interface State {
    Boundary: arrival at now + 120 counts as arriving and now + 121 doesn't; arrival ≤ now reads "Guest waiting".
 3. `[e]` On load as Maya, the Next Up card shows 106 with "Guest arrives 11:30 am", a VIP badge, separate
    occupancy and state chips (vacant / dirty), and a "Report problem · 106" button. The big button reads
-   "Start 106". 105 and 107 are greyed, with their reason and no Start. No visible text matches
+   "Start 106". The plate itself reads "106". 105 and 107 are greyed (grey background), with their reason
+   and no Start. No visible text matches
    `/\bready\b/i`, and every time on screen matches `/\d{1,2}:\d{2} (am|pm)/`.
 4. `[e]` Tapping Start 106 makes the button read "Finish 106" and 106 shows in progress. Tapping Finish puts
    106 in Done as clean, the button reads "Start 103", and a one-line toast says "106 clean · 5 left". The
@@ -186,14 +190,17 @@ export interface State {
    another room is in progress, a Start on a greyed room, a Finish on a room that isn't in progress, a pick
    while a room is in progress or on a greyed room, a fix of a task that's already fixed, a Needs part on a
    task that isn't open, and an undo whose
-   `actionId` doesn't match `before` (including after a pick has cleared `before`).
+   `actionId` doesn't match `before` (including after a pick has cleared `before`). The tests deep-freeze the
+   state, so a `reduce` that changed it in place would throw.
 6. `[e]` After Start 106, two `page.touchscreen.tap` calls 350 ms apart on the big button's position leave
    106 clean and 103 still dirty, and the button reads "Start 103". (350 ms lands late inside the 500 ms guard,
-   like a hesitant second tap. Verified: with the guard removed this test fails.)
+   like a hesitant second tap. Verified: with the guard removed this test fails.) Start 106 then Undo within
+   500 ms: "Start 106" is back but disabled until the guard passes.
 7. `[e]` Report problem · 106 → AC (2 taps, no text field, no send button) shows a toast with Undo, and 106
    shows an "On hold · AC" badge and stays Next Up. A second run: tapping Undo removes the badge, and Sam's
    list doesn't have the task. The demo path: Start 106, report AC while it's in progress, and 106 stays the
    Next Up card ("Finish 106", in progress, on hold) until Finish; then its Done row reads "Clean · On hold · AC".
+   A double tap (250 ms) on Report problem · 106 opens the sheet but files nothing.
 8. `[u]` Hold is derived: an open AC or Plumbing task holds its room, and Light or Broken doesn't. With two
    holding tasks on 106, fixing one keeps the hold and fixing both lifts it.
 9. `[u]` For each of start, finish and report: undo restores `rooms`, `tasks` and `picked` to their state
@@ -207,12 +214,15 @@ export interface State {
     "Clean · AC fixed by Sam".
 12. `[e]` After Start 106 and a page reload, the button still reads "Finish 106" and 106 is in progress.
     With unreadable JSON stored under `lance-nextup:v1`, the app loads the seed without errors. (The
-    wrong-shape and no-Undo-after-reload rules are unit-tested on `load`.)
+    wrong-shape and no-Undo-after-reload rules are unit-tested on `load`.) Reset in the demo bar goes back to
+    "Start 106", and a reload stays there.
 
 **Stretch** (in this order)
 13. `[u]` `[e]` Needs part: the task becomes `needs_part`, the hold stays, it drops to the bottom of Sam's
     list ("Waiting for a part"), and Maya gets the banner "106 AC needs a part". Fixed still closes it later:
-    the hold lifts and the "fixed" banner shows, even if she dismissed the "needs a part" one.
+    the hold lifts and the "fixed" banner shows, even if she dismissed the "needs a part" one. In the browser:
+    after fixing 204, "Fixed 106 · AC" on the waiting task leaves "No open problems" and no big button. A
+    double tap on Needs part · 106 doesn't also mark 204. Plumbing behaves the same as AC (unit).
 14. `[e]` Stop: on an in-progress room, Stop returns it to dirty and to its usual place in the order. The big
     button then reads "Start <that room>".
 15. `[u]` Metrics, from a fixture log with one undone Start and one undone report: each user gets their

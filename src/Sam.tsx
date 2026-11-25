@@ -1,11 +1,13 @@
 import { CATEGORY_LABEL, samQueue, taskReason } from './domain/rules'
 import type { Action, Minutes, State } from './domain/types'
-import { BigButton, Icon, PLATE } from './ui'
+import { BigButton, Icon, PLATE, useArmed } from './ui'
 
 /** Maintenance: the problem to fix next, closed with one tap on Fixed. */
 export function Sam({ s, now, act }: { s: State; now: Minutes; act: (a: Action) => void }) {
   const [next, ...rest] = samQueue(s)
   const room = next && s.rooms.find((r) => r.id === next.roomId)
+  // After Needs part, the next task's button appears in the same spot: re-arm so a double tap can't hit it.
+  const armed = useArmed(`${s.log.length}`)
 
   return (
     <>
@@ -25,8 +27,9 @@ export function Sam({ s, now, act }: { s: State; now: Minutes; act: (a: Action) 
             {/* Outlined and up in the card, far from the big Fixed button. */}
             {next.status === 'open' && (
               <button
+                disabled={!armed}
                 onClick={() => act({ type: 'needsPart', taskId: next.id, at: Date.now() })}
-                className="mt-4 w-full h-14 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash"
+                className="mt-4 w-full h-14 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash disabled:text-muted disabled:border-muted"
               >
                 Needs part · {next.roomId}
               </button>
@@ -50,6 +53,7 @@ export function Sam({ s, now, act }: { s: State; now: Minutes; act: (a: Action) 
       {next && (
         <BigButton
           label={`Fixed ${next.roomId} · ${CATEGORY_LABEL[next.category]}`}
+          version={s.log.length}
           onTap={() => act({ type: 'fix', taskId: next.id, at: Date.now() })}
         />
       )}

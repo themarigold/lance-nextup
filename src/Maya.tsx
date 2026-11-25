@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { board, CATEGORY_LABEL, holdCategories, idle, notices } from './domain/rules'
 import type { Action, Category, Minutes, State } from './domain/types'
-import { BigButton, HoldChip, Icon, OccupancyChip, PLATE, StateChip } from './ui'
+import { BigButton, HoldChip, Icon, OccupancyChip, PLATE, StateChip, useArmed } from './ui'
 
 const CATEGORIES: Category[] = ['ac', 'plumbing', 'light', 'broken']
 
 /** Tap 2 of the report: one tap files it. No typing, no send button; the toast's Undo is the safety net. */
 function ReportSheet({ roomId, onPick, onClose }: { roomId: string; onPick: (c: Category) => void; onClose: () => void }) {
+  // The sheet opens under the finger that tapped Report: a double tap must not file a report by itself.
+  const armed = useArmed(roomId)
   return (
     // Sits over the Next Up panel, not the big button, so a double tap can't land on Start.
     <div role="dialog" aria-label={`Problem in ${roomId}`} className="fixed inset-x-0 top-14 bottom-0 z-40 bg-white px-4 pt-3">
@@ -18,8 +20,9 @@ function ReportSheet({ roomId, onPick, onClose }: { roomId: string; onPick: (c: 
         {CATEGORIES.map((c) => (
           <button
             key={c}
+            disabled={!armed}
             onClick={() => onPick(c)}
-            className="h-32 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash"
+            className="h-32 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-black text-xl font-semibold touch-manipulation active:bg-wash disabled:text-muted disabled:border-muted"
           >
             <Icon name={c} big />
             {CATEGORY_LABEL[c]}
@@ -130,6 +133,7 @@ export function Maya({ s, now, act }: { s: State; now: Minutes; act: (a: Action)
       {next && (
         <BigButton
           label={`${working ? 'Finish' : 'Start'} ${next.room.id}`}
+          version={s.log.length}
           onTap={() => act({ type: working ? 'finish' : 'start', id: crypto.randomUUID(), roomId: next.room.id, at: at() })}
         />
       )}

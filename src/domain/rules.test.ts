@@ -204,6 +204,13 @@ describe('Done row while held, and AC 13: Needs part', () => {
     expect(done106(run(s, start('106'), finish('106')))).toBe('Clean · AC needs a part')
   })
 
+  it('Plumbing through Needs part: held while waiting, its own banner, lifted by Fixed', () => {
+    const waiting = run(seed, report('p', '106', 'plumbing'), needsPart('p'))
+    expect(holdCategories(waiting.tasks, '106')).toEqual(['plumbing'])
+    expect(notices(waiting).map((n) => n.text)).toEqual(['106 Plumbing needs a part'])
+    expect(isOnHold(run(waiting, fix('p')).tasks, '106')).toBe(false)
+  })
+
   it('Fixed still closes it later: the hold lifts and the fixed banner shows, even after dismissing the first', () => {
     const waiting = run(seed, report('r', '106', 'ac'), needsPart('r'), { type: 'dismiss', taskId: 'r', at: 2600 })
     expect(notices(waiting)).toEqual([])

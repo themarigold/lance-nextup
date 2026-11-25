@@ -63,6 +63,21 @@
   hold stays because it comes from the task that's still open. Maya gets "106 AC needs a part". Fixed still
   closes it later (so AC 5 now rejects a fix only on an already-fixed task), and each new outcome shows a
   fresh banner even if she dismissed the earlier one.
+- **Two independent reviews** (a fresh subagent that ran the app, and Codex, read-only) found these fixes:
+  - **Double tap on Report** filed a report, because the sheet opens under the finger. The sheet's buttons are
+    now disabled for 500 ms after it opens.
+  - **Double tap on Needs part** also marked 204. It now has the same guard.
+  - **The guard re-arms on every accepted action** (`useArmed`, keyed on the log length), not only when the
+    label changes. That covers Start then a quick Undo, and two same-category tasks on one room.
+  - **Reset in the demo bar** (with a confirm) clears saved state and reloads the seed, so a rehearsal can't
+    leak into the demo. It clears storage and reloads instead of going through `reduce`, because it's demo
+    chrome, not app state.
+  - **The spec now says the toast covers the demo bar.** It said "under" before, which disagreed with the code.
+  - **New tests:**
+    - the AC 3 plate and the grey background on greyed rows;
+    - AC 5 deep-freezes the state;
+    - AC 13 in the browser, through Fixed and to Sam's empty screen;
+    - Plumbing through Needs part.
 
 ## Cuts
 - A "Back to suggested" button after picking a row. Safari doesn't fire a tap when she scrolls, and
@@ -76,3 +91,8 @@
 - Undo for Sam's Fixed.
 - Atkinson Hyperlegible Next font (one self-hosted .woff2), for clearer 1/l/I and 0/O. `system-ui` for now.
 - README: replace the Vite template and show the 10:15 am and 12:05 pm orders (the spec requires this).
+- **Stricter saved-data check:** `load` checks that `rooms`, `tasks` and `log` are arrays but not what's in
+  them. `rooms: [null]` passes and then crashes the board, and any `user` string (e.g. "priya") is accepted.
+  This only happens with hand-edited storage.
+- **Demo over https only:** `crypto.randomUUID()` needs a secure context. Over plain http on a LAN address
+  (`npm run dev -- --host` on the phone), Start, Finish and Report fail. Vercel (https) and localhost are fine.

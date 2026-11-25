@@ -53,17 +53,28 @@ export const HoldChip = ({ category, text }: { category: Category; text: string 
   <span className="inline-flex items-center gap-1.5 h-10 px-2.5 rounded-full bg-black text-white text-base font-semibold"><Icon name={category} />{text}</span>
 )
 
-/** Full-width action that always names its room. Disabled for 500 ms after its label changes, so a double tap can't hit the next room. */
-export function BigButton({ label, onTap }: { label: string; onTap: () => void }) {
-  const [readyFor, setReadyFor] = useState<string>()
+/**
+ * True once `key` has stayed the same for 500 ms. Buttons stay disabled until then, so the second tap of a
+ * double tap can't land on whatever just appeared under the finger. Pass a key that changes on every
+ * accepted action (e.g. the log length), not just the label: after an Undo, or a second task on the same
+ * room, the label comes back unchanged but the guard must still re-arm.
+ */
+export function useArmed(key: string) {
+  const [armedFor, setArmedFor] = useState<string>()
   useEffect(() => {
-    const t = setTimeout(() => setReadyFor(label), 500)
+    const t = setTimeout(() => setArmedFor(key), 500)
     return () => clearTimeout(t)
-  }, [label])
+  }, [key])
+  return armedFor === key
+}
+
+/** Full-width action that always names its room. Re-arms (disabled 500 ms) whenever `version` or the label changes. */
+export function BigButton({ label, version, onTap }: { label: string; version: number; onTap: () => void }) {
+  const armed = useArmed(`${version}|${label}`)
   return (
     <div className="sticky bottom-0 mt-auto bg-white border-t-2 border-black px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
       <button
-        disabled={readyFor !== label}
+        disabled={!armed}
         onClick={onTap}
         className="w-full h-[72px] rounded-2xl bg-black text-white text-2xl font-bold touch-manipulation active:bg-neutral-700 disabled:bg-neutral-400"
       >

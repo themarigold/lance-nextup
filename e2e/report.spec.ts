@@ -40,6 +40,29 @@ test('AC 7: two taps report AC on 106, which goes on hold and stays Next Up', as
   expect(errs).toEqual([])
 })
 
+/** Two raw touches on the same spot, `gap` ms apart: a real double tap. */
+async function doubleTap(page: Page, name: string, gap = 250) {
+  const box = (await page.getByRole('button', { name }).boundingBox())!
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2]
+  await page.touchscreen.tap(x, y)
+  await page.waitForTimeout(gap)
+  await page.touchscreen.tap(x, y)
+  await page.waitForTimeout(700) // past the guard: a tap that got through has had time to act
+}
+
+test('AC 7: a double tap on Report problem opens the sheet but files nothing', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await doubleTap(page, 'Report problem · 106')
+  await expect(page.getByRole('dialog', { name: 'Problem in 106' })).toBeVisible()
+  await expect(toast(page)).toHaveCount(0)
+  await page.getByRole('button', { name: 'Close' }).tap()
+  await expect(nextUp(page).getByText(/On hold/)).toHaveCount(0)
+  await user(page, 'Sam').tap()
+  await expect(page.locator('main')).not.toContainText('106') // Sam got nothing
+  expect(errs).toEqual([])
+})
+
 test('AC 7, demo path: Start 106, report AC while cleaning, Finish', async ({ page }) => {
   const errs = trackErrors(page)
   await page.goto('/')
@@ -93,6 +116,33 @@ test('AC 13: Sam marks 106 Needs part; it waits at the bottom, stays on hold, an
   await user(page, 'Maya').tap()
   await expect(page.getByText('106 AC needs a part')).toBeVisible()
   await expect(nextUp(page).getByText('On hold · AC')).toBeVisible() // still held: the task is open-ended
+
+  // Later the part arrives: Sam fixes 204, then Fixed on the waiting 106, and his list is empty.
+  await user(page, 'Sam').tap()
+  await tapBig(page, 'Fixed 204 · Light')
+  await expect(nextUp(page)).toContainText('Waiting for a part')
+  await expect(page.getByRole('button', { name: /^Needs part/ })).toHaveCount(0) // already waiting
+  await tapBig(page, 'Fixed 106 · AC')
+  await expect(nextUp(page)).toContainText('No open problems')
+  await expect(big(page)).toHaveCount(0)
+  await assertPhoneRules(page)
+
+  await user(page, 'Maya').tap()
+  await expect(page.getByText('106 AC fixed by Sam')).toBeVisible()
+  await expect(nextUp(page).getByText(/On hold/)).toHaveCount(0) // hold lifted
+  expect(errs).toEqual([])
+})
+
+test('AC 13: a double tap on Needs part · 106 does not also mark 204', async ({ page }) => {
+  const errs = trackErrors(page)
+  await page.goto('/')
+  await reportAC(page)
+  await expect(toast(page)).toHaveCount(0, { timeout: 7000 })
+  await user(page, 'Sam').tap()
+  await expect(page.getByRole('button', { name: 'Needs part · 106' })).toBeEnabled()
+  await doubleTap(page, 'Needs part · 106')
+  await expect(big(page)).toHaveText('Fixed 204 · Light')
+  await expect(page.getByRole('button', { name: 'Needs part · 204' })).toBeVisible() // 204 is still open
   expect(errs).toEqual([])
 })
 

@@ -3,7 +3,15 @@ import { NOW, seed } from './seed'
 import { load, reduce } from './reduce'
 import type { Action, State } from './types'
 
-const run = (s: State, ...as: Action[]) => as.reduce((st, a) => reduce(st, a, NOW), s)
+/** Deep-freezes the input, so a reduce that mutates state in place throws (ES modules are strict). */
+function freeze<T>(o: T): T {
+  if (o && typeof o === 'object' && !Object.isFrozen(o)) {
+    Object.freeze(o)
+    for (const v of Object.values(o)) freeze(v)
+  }
+  return o
+}
+const run = (s: State, ...as: Action[]) => as.reduce((st, a) => reduce(freeze(st), a, NOW), s)
 const start = (roomId: string): Action & { id: string } => ({ type: 'start', id: `s-${roomId}`, roomId, at: 1000 })
 const finish = (roomId: string): Action & { id: string } => ({ type: 'finish', id: `f-${roomId}`, roomId, at: 2000 })
 const report = (id: string, roomId: string): Action & { id: string } => ({ type: 'report', id, roomId, category: 'ac', at: 1500 })
@@ -13,9 +21,10 @@ const undo = (actionId: string): Action => ({ type: 'undo', actionId, at: 4000 }
 
 /** A rejected action returns the very same state object, so nothing is logged. */
 function expectRejected(s: State, a: Action) {
-  const out = reduce(s, a, NOW)
+  const logLength = s.log.length // read before, so an in-place append can't hide
+  const out = reduce(freeze(s), a, NOW)
   expect(out).toBe(s)
-  expect(out.log).toHaveLength(s.log.length)
+  expect(out.log).toHaveLength(logLength)
 }
 
 describe('AC 5: reduce rejects invalid actions', () => {

@@ -71,6 +71,21 @@ export default function App() {
             </button>
           ))}
         </div>
+        {/* Demo-only: back to the 10:15 am seed between takes. Lives up here, far from the big button. */}
+        <button
+          onClick={() => {
+            if (!confirm('Reset the demo to the start of the shift?')) return
+            try {
+              localStorage.removeItem(KEY)
+            } catch {
+              // storage blocked: the reload still starts from the seed
+            }
+            location.reload()
+          }}
+          className="h-12 px-3 rounded-full border-2 border-black text-base font-semibold touch-manipulation active:bg-wash"
+        >
+          Reset
+        </button>
         <span className="ml-auto text-lg font-semibold tabular-nums">{fmt(NOW)}</span>
       </header>
       {live && <Toast text={live.text} onUndo={() => act({ type: 'undo', actionId: live.id, at: Date.now() })} />}
