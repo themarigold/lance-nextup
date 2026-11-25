@@ -47,12 +47,15 @@ For 500 ms after its room or label changes it is `disabled` (it looks dimmed and
 **Toast** sits at the **top** of the screen, under the demo bar and well away from the big button,
 so Undo is never just above Start. One toast at a time: a new one replaces the old, so Undo always
 means the last thing she did. Each toast lasts 5 s, and it disappears early as soon as any other action
-is accepted (a pick, a user switch, a dismiss). Start shows "Started 106 · Undo", and Finish shows
-"106 clean · 5 rooms left on your board · Undo".
+is accepted (a pick, a user switch, a dismiss). The toast text stays on one line: Start shows
+"Started 106 · Undo", and Finish shows "106 clean · 5 left · Undo".
+**After Finish or a pick** the page scrolls back to the top, so the new Next Up plate is fully visible and
+not under the toast.
 
 **Report.** The Next Up card has an outlined button that names the room, "Report problem · 106"
 (deliberately not in the bottom bar, so she can't confuse it with Finish). Tap 1 opens a 4-icon grid:
-❄️ AC · 🚿 Plumbing · 💡 Light · 🔨 Broken item. Tap 2 files the report: no typing, no send button. The grid closes on that tap, so a double tap can't
+AC (snowflake) · Plumbing (drop) · Light (bulb) · Broken item (wrench), each a plain black line
+icon with its word. No emoji: colour only means cleaning state, and emoji look different on Android. Tap 2 files the report: no typing, no send button. The grid closes on that tap, so a double tap can't
 file two reports. It shows
 a toast with Undo. The report reaches Sam immediately, and Undo removes it for both Maya and Sam.
 
@@ -171,16 +174,18 @@ export interface State {
    "Start 106". 105 and 107 are greyed, with their reason and no Start. No visible text matches
    `/\bready\b/i`, and every time on screen matches `/\d{1,2}:\d{2} (am|pm)/`.
 4. `[e]` Tapping Start 106 makes the button read "Finish 106" and 106 shows in progress. Tapping Finish puts
-   106 in Done as clean, the button reads "Start 103", and a toast says "106 clean · 5 rooms left on your
-   board". The toast sits above the Next Up card. Tapping Undo on it puts 106 back in progress with
+   106 in Done as clean, the button reads "Start 103", and a one-line toast says "106 clean · 5 left". The
+   toast sits above the Next Up card. Even if she had scrolled down before Finish, the 103 plate is then
+   fully on screen and not covered by the toast or the bottom bar. Tapping Undo on it puts 106 back in progress with
    "Finish 106". Finishing again and then tapping the 104 row makes 104 Next Up ("Start 104"), and the toast
    disappears.
 5. `[u]` `reduce` rejects, returning the *same state object* and adding nothing to the log: a Start while
    another room is in progress, a Start on a greyed room, a Finish on a room that isn't in progress, a pick
    while a room is in progress or on a greyed room, a fix of a task that isn't open, and an undo whose
    `actionId` doesn't match `before` (including after a pick has cleared `before`).
-6. `[e]` After Start 106, two `page.touchscreen.tap` calls 100 ms apart on the big button's position leave
-   106 clean and 103 still dirty, and the button reads "Start 103".
+6. `[e]` After Start 106, two `page.touchscreen.tap` calls 350 ms apart on the big button's position leave
+   106 clean and 103 still dirty, and the button reads "Start 103". (350 ms lands late inside the 500 ms guard,
+   like a hesitant second tap. Verified: with the guard removed this test fails.)
 7. `[e]` Report problem · 106 → AC (2 taps, no text field, no send button) shows a toast with Undo, and 106
    shows an "On hold · AC" badge and stays Next Up. A second run: tapping Undo removes the badge, and Sam's
    list doesn't have the task.

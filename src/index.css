@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+@theme {
+  --color-progress: #f2b705;
+  --color-clean: #1f5fcc;
+  --color-inspected: #1e7a3c;
+  --color-muted: #595959;
+  --color-wash: #eeeeee;
+}
+
+body {
+  background: #fff;
+  color: #000;
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* The one motion: a new Next Up plate fades in. */
+@keyframes plate-in {
+  from { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; }
+}

@@ -39,7 +39,16 @@
 - **Design:** `system-ui` font (nothing to add). The room number sits on a plate like a door sign. Dirty
   is a neutral white plate, so the list isn't a wall of red. Amber is in progress, blue is clean, and
   green is only ever inspected, which puts "never say ready" into the colours. Occupancy is an outline
-  chip with no colour.
+  chip with no colour. Icons are plain black inline SVG, not emoji (emoji add colour and differ on
+  Android). The plate uses 64px numerals, or 52px for 4-digit rooms like 1308 so they still fit
+  (measured in the mock). The toast covers the demo bar, so switching to Sam waits up to 5 s.
+
+- **Toast:** one line ("106 clean · 5 left"). After Finish or a pick the page scrolls to the top, so the
+  new Next Up plate is never under the toast. AC 4 scrolls down first, then checks the plate is fully
+  on screen and nothing covers it.
+- **AC 6 at 350 ms**, late inside the 500 ms guard. Lesson from verifying it: my first "guard removed"
+  change left a variable unused, so `tsc` failed and Playwright tested the old (guarded) build. Any
+  break-the-code check must stop when the build fails, or its result means nothing.
 
 ## Cuts
 - A "Back to suggested" button after picking a row. Safari doesn't fire a tap when she scrolls, and
